@@ -1,0 +1,190 @@
+/* Tooltip and popup styles - Light mode */
+
+.sts-tooltip {
+  position: absolute;
+  z-index: 2147483647; /* max z-index to ensure visibility */
+  background: #ffffff;
+  color: #111827;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  box-shadow: 0 6px 16px rgba(17, 24, 39, 0.12);
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  cursor: pointer;
+  user-select: none;
+  display: none;
+}
+
+.sts-tooltip::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 10px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent transparent #ffffff transparent;
+}
+
+.sts-popup {
+  position: fixed;
+  z-index: 2147483647;
+  right: 16px;
+  bottom: 16px;
+  width: min(420px, 90vw);
+  max-height: 60vh;
+  background: #ffffff;
+  color: #111827;
+  border-radius: 10px;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  box-shadow: 0 12px 32px rgba(17, 24, 39, 0.14);
+  overflow: hidden;
+  display: none;
+}
+
+.sts-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #f3f4f6;
+  color: #111827;
+  border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.sts-popup-header .title {
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Download status styling */
+.sts-download {
+  font-weight: 400;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Keep existing loading hint */
+.sts-popup.is-loading .title::after {
+  content: ' • Loading';
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.sts-popup-header .actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sts-btn {
+  background: #f3f4f6;
+  color: #111827;
+  border: 1px solid rgba(17, 24, 39, 0.15);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.sts-btn:hover { background: #e5e7eb; }
+
+.sts-content {
+  padding: 12px;
+  overflow: auto;
+  max-height: calc(60vh - 48px);
+}
+
+/* Stacking container for skeleton and text: absolute overlay */
+.sts-stack {
+  position: relative;
+  /* Keep skeleton + height variables in one place */
+  --sts-line-h: 12px;
+  --sts-gap: 8px;
+  /* Default height equals skeleton height (4 lines + 3 gaps) */
+  min-height: calc(4 * var(--sts-line-h) + 3 * var(--sts-gap));
+}
+.sts-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Remove bottom: 0 to allow natural expansion */
+}
+.sts-layer--skeleton { z-index: 0; }
+.sts-layer--text { 
+  z-index: 1; 
+  position: relative; /* Let text layer drive container height */
+}
+
+.sts-loading {
+  color: #6b7280;
+  font-style: italic;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sts-spinner {
+  display: inline-block;
+  font-size: 14px;
+}
+
+.sts-spinner::after {
+  content: "⏳";
+  display: inline-block;
+  animation: sts-spin 1s linear infinite;
+}
+
+@keyframes sts-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.sts-error {
+  color: #b91c1c;
+}
+
+/* Skeleton placeholder for summary (~3.2 lines) */
+.sts-skeleton {
+  display: grid;
+  gap: var(--sts-gap);
+}
+.sts-skeleton-line {
+  height: var(--sts-line-h);
+  border-radius: 6px;
+  background: linear-gradient(90deg, #eceff3 0%, #f5f7fa 40%, #eceff3 80%);
+  background-size: 200% 100%;
+  animation: sts-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes sts-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Smooth transition from skeleton to text */
+.sts-fade { transition: opacity 60ms ease; }
+.sts-content-md.is-visible { opacity: 1 !important; }
+.sts-skeleton.fade-out { opacity: 0.0; transition: opacity 60ms ease-out; }
+
+/* Allow per-line opacity changes (JS controls delays) */
+.sts-skeleton-line { opacity: 1; }
+
+/* Disabled state + loading hint (existing) */
+.sts-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+.sts-popup.is-loading .title::after {
+  content: ' • Loading';
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.sts-tooltip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sts-tooltip-btn { font-size: 12px; }

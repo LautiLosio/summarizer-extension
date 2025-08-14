@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Smart Text Summarizer</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+        background: #0b1220;
+        color: #e5e7eb;
+        width: 320px;
+      }
+      header { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.08);}
+      h1 { margin: 0; font-size: 14px; }
+      .row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding: 12px; }
+      label { font-size: 12px; color: #cbd5e1; }
+      input[type="number"] { width: 80px; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: #111827; color: #fff; }
+      button { background: #1f2937; color: #e5e7eb; border: 1px solid rgba(255,255,255,0.1); padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+      button:hover { background: #374151; }
+      .note { padding: 0 12px 12px; color: #9ca3af; font-size: 12px; }
+      .small { font-size: 11px; color: #9ca3af; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Smart Text Summarizer</h1>
+    </header>
+    <div class="row">
+      <label for="minWords">Min words to show tooltip</label>
+      <input id="minWords" type="number" min="1" value="40" />
+    </div>
+    <div class="row">
+      <button id="save">Save</button>
+      <span id="status" class="small"></span>
+    </div>
+    <p class="note small">Select some long text on any page to see a Summarize tooltip. Click it to open a summary popup.</p>
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>
