@@ -15,7 +15,8 @@
       avgCharsPerSecond: 15,
       runCount: 0
     },
-    lastMouseX: 0
+    lastMouseX: 0,
+    lastMouseY: 0
   };
 
   function loadConfig() {
@@ -55,8 +56,16 @@
       📝 Summarize
     </div>`;
     
-    el.addEventListener('mousedown', e => e.preventDefault() || e.stopPropagation());
-    el.addEventListener('click', onTooltipClick);
+    el.addEventListener('transitionend', (e) => {
+      if (e.target === el && !el.classList.contains('sts-visible')) {
+        el.style.display = 'none';
+      }
+    });
+    const btn = el.querySelector('.sts-tooltip-btn');
+    if (btn) {
+      btn.addEventListener('mousedown', e => e.preventDefault() || e.stopPropagation());
+      btn.addEventListener('click', onTooltipClick);
+    }
     document.body.appendChild(el);
     
     return state.tooltipEl = el;
@@ -68,18 +77,25 @@
     const el = document.createElement('div');
     el.className = 'sts-popup';
     el.innerHTML = `
-      <div class="sts-popup-header">
-        <div class="title">Summary <span id="sts-download" class="sts-download" aria-live="polite"></span></div>
-        <div class="actions">
-          <button class="sts-btn sts-copy">Copy</button>
-          <button class="sts-btn sts-close">Close</button>
+      <div class="sts-popup-inner">
+        <div class="sts-popup-header">
+          <div class="title">Summary <span id="sts-download" class="sts-download" aria-live="polite"></span></div>
+          <div class="actions">
+            <button class="sts-btn sts-copy">Copy</button>
+            <button class="sts-btn sts-close">Close</button>
+          </div>
         </div>
-      </div>
-      <div class="sts-content" id="sts-content">
-        <div class="sts-loading"><span class="sts-spinner" aria-hidden="true"></span> Preparing summarizer...</div>
+        <div class="sts-content" id="sts-content">
+          <div class="sts-loading"><span class="sts-spinner" aria-hidden="true"></span> Preparing summarizer...</div>
+        </div>
       </div>
     `;
     
+    el.addEventListener('transitionend', (e) => {
+      if (e.target === el && !el.classList.contains('sts-visible')) {
+        el.style.display = 'none';
+      }
+    });
     el.querySelector('.sts-close')?.addEventListener('click', hidePopup);
     el.querySelector('.sts-copy')?.addEventListener('click', copySummary);
     document.body.appendChild(el);
@@ -89,61 +105,54 @@
 
   function showTooltipAt(rect) {
     const el = ensureTooltip();
-    el.style.visibility = 'hidden';
+    const btn = el.querySelector('.sts-tooltip-btn');
+    if (!btn) return;
     el.style.display = 'block';
-    
-    const tooltipRect = el.getBoundingClientRect();
+
+    const tooltipRect = btn.getBoundingClientRect();
     const pos = calculateOptimalPosition(rect, tooltipRect, state.lastMouseX);
-    
-    el.style.visibility = '';
-    el.style.top = `${pos.top}px`;
-    el.style.left = `${pos.left}px`;
+
+    btn.style.top = `${pos.top}px`;
+    btn.style.left = `${pos.left}px`;
+    setTimeout(() => el.classList.add('sts-visible'), 10);
   }
 
   function calculateOptimalPosition(selectionRect, tooltipRect, mouseX) {
     const viewport = {
       width: window.innerWidth,
-      height: window.innerHeight,
-      scrollX: window.scrollX,
-      scrollY: window.scrollY
+      height: window.innerHeight
     };
     
-    const margin = 8;
+    const margin = 12;
     const tooltipWidth = tooltipRect.width || 120;
     const tooltipHeight = tooltipRect.height || 32;
-    
-    let top = viewport.scrollY + selectionRect.bottom + margin;
-    const x = (isFinite(mouseX)) ? mouseX : selectionRect.left;
-    let left = viewport.scrollX + x + margin;
 
-    // Large selections: keep bottom positioning, follow mouse X
-    if (selectionRect.width > viewport.width * 0.8 || selectionRect.height > viewport.height * 0.8) {
-      top = viewport.scrollY + selectionRect.bottom + margin;
+    let top = state.lastMouseY + margin;
+    let left = state.lastMouseX + margin;
+
+    if (left + tooltipWidth > viewport.width - margin) {
+      left = state.lastMouseX - tooltipWidth - margin;
     }
     
-    // Constrain to viewport
-    left = Math.max(
-      viewport.scrollX + margin,
-      Math.min(left, viewport.scrollX + viewport.width - tooltipWidth - margin)
-    );
-    
-    if (top + tooltipHeight > viewport.scrollY + viewport.height - margin) {
-      top = Math.max(
-        viewport.scrollY + margin,
-        viewport.scrollY + selectionRect.top - tooltipHeight - margin
-      );
+    if (top + tooltipHeight > viewport.height - margin) {
+      top = state.lastMouseY - tooltipHeight - margin;
     }
+    
+    top = Math.max(margin, top);
+    left = Math.max(margin, left);
     
     return { top, left };
   }
 
-  const hideTooltip = () => state.tooltipEl && (state.tooltipEl.style.display = 'none');
+  const hideTooltip = () => state.tooltipEl?.classList.remove('sts-visible');
 
   function showPopup() {
-    ensurePopup().style.display = 'block';
+    const el = ensurePopup();
+    el.style.display = 'block';
+    setTimeout(() => el.classList.add('sts-visible'), 10);
   }
 
-  const hidePopup = () => state.popupEl && (state.popupEl.style.display = 'none');
+  const hidePopup = () => state.popupEl?.classList.remove('sts-visible');
 
   function setPopupContent(html) {
     const content = ensurePopup().querySelector('#sts-content');
@@ -236,7 +245,7 @@
 
       const secsPerLine = CHARS_PER_LINE / Math.max(1, cpsEstimate);
       const handles = lines.map((line, idx) => setTimeout(() => {
-        line.style.transition = 'opacity 160ms ease';
+        line.style.transition = 'opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)';
         line.style.opacity = '0';
       }, secsPerLine * idx * 1000));
 
@@ -308,6 +317,7 @@
   }
 
   function onTooltipClick() {
+    window.getSelection()?.removeAllRanges();
     hideTooltip();
     summarizeSelection();
   }
@@ -344,19 +354,22 @@
 
   document.addEventListener('mousedown', (e) => {
     state.lastMouseX = e?.clientX ?? state.lastMouseX;
+    state.lastMouseY = e?.clientY ?? state.lastMouseY;
     hideTooltip();
   });
 
   // Track current mouse X position continuously so we can align tooltip horizontally
   document.addEventListener('mousemove', (e) => {
     state.lastMouseX = e?.clientX ?? state.lastMouseX;
+    state.lastMouseY = e?.clientY ?? state.lastMouseY;
   }, true);
 
   // Ensure we capture the final cursor X at the end of selection
   document.addEventListener('mouseup', (e) => {
     state.lastMouseX = e?.clientX ?? state.lastMouseX;
+    state.lastMouseY = e?.clientY ?? state.lastMouseY;
   }, true);
-  document.addEventListener('click', onGlobalClick, true);
+  // document.addEventListener('click', onGlobalClick, true);
 
   document.addEventListener('scroll', () => updateTooltipPositionIfNeeded(), true);
   window.addEventListener('resize', updateTooltipPositionIfNeeded);

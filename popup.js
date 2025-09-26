@@ -1,31 +1,124 @@
-const CONFIG_KEY = 'sts_config';
+const AppState = {
+  LOADING: 'loading',
+  READY: 'ready',
+  DOWNLOAD: 'download',
+  DOWNLOADING: 'downloading',
+  ERROR: 'error'
+};
 
-const minWordsInput = document.getElementById('minWords');
-const saveBtn = document.getElementById('save');
-const statusEl = document.getElementById('status');
+const STORAGE_KEYS = {
+  CONFIG: 'sts_config',
+  MODEL_DOWNLOADED: 'sts_model_downloaded'
+};
 
-function load() {
-  if (chrome?.storage?.sync) {
-    chrome.storage.sync.get([CONFIG_KEY], (res) => {
-      const cfg = res?.[CONFIG_KEY];
-      if (cfg && typeof cfg.minWords === 'number') {
-        minWordsInput.value = String(cfg.minWords);
+const storage = {
+  get: (keys) => new Promise(resolve => chrome.storage.sync.get(keys, resolve)),
+  set: (items) => new Promise(resolve => chrome.storage.sync.set(items, resolve))
+};
+
+const elements = {
+  container: document.getElementById('container'),
+  downloadBtn: document.getElementById('download-btn'),
+  downloadProgressBar: document.getElementById('download-progress-bar'),
+  downloadProgressText: document.getElementById('download-progress-text'),
+  errorMessage: document.getElementById('error-message'),
+  minWordsInput: document.getElementById('minWords'),
+  saveSettingsBtn: document.getElementById('save-settings-btn'),
+  saveStatus: document.getElementById('save-status'),
+  statuses: {
+    loading: document.getElementById('status-loading'),
+    ready: document.getElementById('status-ready'),
+    download: document.getElementById('status-download'),
+    downloading: document.getElementById('status-downloading'),
+    error: document.getElementById('status-error')
+  }
+};
+
+function showStatus(state, msg = '') {
+  for (const s in elements.statuses) {
+    elements.statuses[s]?.classList.toggle('hidden', s !== state);
+  }
+  if (state === AppState.ERROR && msg) {
+    elements.errorMessage.textContent = msg;
+  }
+}
+
+async function checkSummarizer() {
+  const stored = await storage.get([STORAGE_KEYS.MODEL_DOWNLOADED]);
+  if (stored[STORAGE_KEYS.MODEL_DOWNLOADED]) {
+    showStatus(AppState.READY);
+    return;
+  }
+
+  if (!self.Summarizer) {
+    showStatus(AppState.ERROR, 'Summarizer API is not supported in this browser.');
+    return;
+  }
+
+  try {
+    const availability = await self.Summarizer.availability();
+    if (availability === 'ready') {
+      await storage.set({ [STORAGE_KEYS.MODEL_DOWNLOADED]: true });
+      showStatus(AppState.READY);
+    } else if (availability === 'not-ready' || availability === 'available') {
+      showStatus(AppState.DOWNLOAD);
+    } else {
+      showStatus(AppState.ERROR, `Summarizer is unavailable. Status: ${availability}`);
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'An unknown error occurred.';
+    showStatus(AppState.ERROR, `Failed to check summarizer availability. ${msg}`);
+  }
+}
+
+async function downloadModel() {
+  showStatus(AppState.DOWNLOADING);
+  elements.downloadBtn.disabled = true;
+  elements.downloadBtn.textContent = 'Downloading...';
+
+  try {
+    await self.Summarizer.create({
+      monitor: (monitor) => {
+        monitor.addEventListener('downloadprogress', (e) => {
+          const progress = Math.round(e.loaded * 100);
+          elements.downloadProgressBar.style.width = `${progress}%`;
+          elements.downloadProgressText.textContent = `Downloaded ${progress}%`;
+        });
       }
     });
+    await storage.set({ [STORAGE_KEYS.MODEL_DOWNLOADED]: true });
+    showStatus(AppState.READY);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'An unknown error occurred.';
+    showStatus(AppState.ERROR, `Failed to download model. ${msg}`);
+  } finally {
+    elements.downloadBtn.disabled = false;
+    elements.downloadBtn.textContent = 'Download Model';
   }
 }
 
-function save() {
-  const minWords = Math.max(1, Number(minWordsInput.value || 40));
-  const cfg = { minWords };
-  if (chrome?.storage?.sync) {
-    chrome.storage.sync.set({ [CONFIG_KEY]: cfg }, () => {
-      statusEl.textContent = 'Saved!';
-      setTimeout(() => (statusEl.textContent = ''), 1200);
-    });
-  }
+async function loadSettings() {
+  const res = await storage.get([STORAGE_KEYS.CONFIG]);
+  const cfg = res?.[STORAGE_KEYS.CONFIG];
+  elements.minWordsInput.value = String(cfg?.minWords ?? 40);
 }
 
-saveBtn.addEventListener('click', save);
+async function saveSettings() {
+  const minWords = Math.max(1, Number(elements.minWordsInput.value || 40));
+  await storage.set({ [STORAGE_KEYS.CONFIG]: { minWords } });
+  elements.saveStatus.textContent = 'Saved!';
+  setTimeout(() => (elements.saveStatus.textContent = ''), 1200);
+}
 
-document.addEventListener('DOMContentLoaded', load);
+function init() {
+  if (!elements.container) return;
+
+  elements.downloadBtn?.addEventListener('click', downloadModel);
+  elements.saveSettingsBtn?.addEventListener('click', saveSettings);
+  
+  showStatus(AppState.LOADING);
+  checkSummarizer();
+  loadSettings();
+}
+
+document.addEventListener('DOMContentLoaded', init);

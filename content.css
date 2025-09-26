@@ -1,8 +1,31 @@
 /* Tooltip and popup styles - Light mode */
+:root {
+  --sts-anim-duration: 400ms;
+  --sts-anim-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
 
 .sts-tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2147483647;
+  user-select: none;
+  display: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--sts-anim-duration) var(--sts-anim-easing), visibility var(--sts-anim-duration) var(--sts-anim-easing);
+  pointer-events: none;
+}
+
+.sts-tooltip.sts-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.sts-tooltip-btn {
   position: absolute;
-  z-index: 2147483647; /* max z-index to ensure visibility */
   background: #ffffff;
   color: #111827;
   border-radius: 6px;
@@ -11,11 +34,21 @@
   box-shadow: 0 6px 16px rgba(17, 24, 39, 0.12);
   border: 1px solid rgba(17, 24, 39, 0.12);
   cursor: pointer;
-  user-select: none;
-  display: none;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity var(--sts-anim-duration) var(--sts-anim-easing),
+    transform var(--sts-anim-duration) var(--sts-anim-easing),
+    top 120ms ease-out,
+    left 120ms ease-out;
+  pointer-events: auto;
 }
 
-.sts-tooltip::after {
+.sts-tooltip.sts-visible .sts-tooltip-btn {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.sts-tooltip-btn::after {
   content: '';
   position: absolute;
   top: -6px;
@@ -32,13 +65,36 @@
   bottom: 16px;
   width: min(420px, 90vw);
   max-height: 60vh;
+  display: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--sts-anim-duration) var(--sts-anim-easing), visibility var(--sts-anim-duration) var(--sts-anim-easing);
+}
+
+.sts-popup.sts-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.sts-popup-inner {
+  width: 100%;
+  height: 100%;
   background: #ffffff;
   color: #111827;
   border-radius: 10px;
   border: 1px solid rgba(17, 24, 39, 0.12);
   box-shadow: 0 12px 32px rgba(17, 24, 39, 0.14);
   overflow: hidden;
-  display: none;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity var(--sts-anim-duration) var(--sts-anim-easing), transform var(--sts-anim-duration) var(--sts-anim-easing);
+}
+
+.sts-popup.sts-visible .sts-popup-inner {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .sts-popup-header {

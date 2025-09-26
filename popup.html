@@ -11,7 +11,9 @@
         background: #0b1220;
         color: #e5e7eb;
         width: 320px;
+        min-height: 160px;
       }
+      .container { padding: 12px; }
       header { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.08);}
       h1 { margin: 0; font-size: 14px; }
       .row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding: 12px; }
@@ -19,23 +21,86 @@
       input[type="number"] { width: 80px; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: #111827; color: #fff; }
       button { background: #1f2937; color: #e5e7eb; border: 1px solid rgba(255,255,255,0.1); padding: 6px 10px; border-radius: 6px; cursor: pointer; }
       button:hover { background: #374151; }
+      button:disabled { background: #111827; color: #6b7280; cursor: not-allowed; }
       .note { padding: 0 12px 12px; color: #9ca3af; font-size: 12px; }
       .small { font-size: 11px; color: #9ca3af; }
+      .hidden { display: none !important; }
+
+      /* Status styles */
+      .status-card { text-align: center; padding: 20px; }
+      .status-card .icon { font-size: 24px; margin-bottom: 8px; }
+      .status-card .title { font-weight: 500; }
+      .status-card .message { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+      .status-card .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #1f2937;
+        border-radius: 3px;
+        margin-top: 12px;
+        overflow: hidden;
+      }
+      .status-card .progress-bar-inner {
+        height: 100%;
+        width: 0%;
+        background: #4f46e5;
+        border-radius: 3px;
+        transition: width 150ms ease-out;
+      }
     </style>
   </head>
   <body>
     <header>
       <h1>Smart Text Summarizer</h1>
     </header>
-    <div class="row">
-      <label for="minWords">Min words to show tooltip</label>
-      <input id="minWords" type="number" min="1" value="40" />
+
+    <div id="container" class="container">
+      <!-- Loading state -->
+      <div id="status-loading" class="status-card">
+        <div class="icon">⏳</div>
+        <div class="title">Checking readiness...</div>
+      </div>
+
+      <!-- Ready state -->
+      <div id="status-ready" class="status-card hidden">
+        <div class="icon">✅</div>
+        <div class="title">Ready to Summarize</div>
+        <div class="message">Select text on any webpage to see the summarize tooltip.</div>
+        <div class="settings-container">
+          <div class="row">
+            <label for="minWords">Min words for tooltip</label>
+            <input id="minWords" type="number" min="1" />
+          </div>
+          <div class="row">
+            <button id="save-settings-btn">Save Settings</button>
+            <span id="save-status" class="small"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Download state -->
+      <div id="status-download" class="status-card hidden">
+        <div class="icon">📦</div>
+        <div class="title">Model Download Required</div>
+        <div class="message">The summarizer needs to download a small model to work offline.</div>
+        <button id="download-btn" style="margin-top: 12px;">Download Model</button>
+      </div>
+      
+      <!-- Downloading state -->
+      <div id="status-downloading" class="status-card hidden">
+        <div class="icon">📥</div>
+        <div class="title">Downloading Model...</div>
+        <div id="download-progress-text" class="message"></div>
+        <div class="progress-bar"><div id="download-progress-bar" class="progress-bar-inner"></div></div>
+      </div>
+
+      <!-- Error state -->
+      <div id="status-error" class="status-card hidden">
+        <div class="icon">❌</div>
+        <div class="title">Summarizer Not Available</div>
+        <div id="error-message" class="message">This feature is not supported by your browser or has been disabled.</div>
+      </div>
     </div>
-    <div class="row">
-      <button id="save">Save</button>
-      <span id="status" class="small"></span>
-    </div>
-    <p class="note small">Select some long text on any page to see a Summarize tooltip. Click it to open a summary popup.</p>
+    
     <script src="popup.js" type="module"></script>
   </body>
 </html>
