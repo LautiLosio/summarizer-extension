@@ -15,7 +15,9 @@
   display: none;
   opacity: 0;
   visibility: hidden;
-  transition: opacity var(--sts-anim-duration) var(--sts-anim-easing), visibility var(--sts-anim-duration) var(--sts-anim-easing);
+  transition:
+    opacity var(--sts-anim-duration) var(--sts-anim-easing),
+    visibility var(--sts-anim-duration) var(--sts-anim-easing);
   pointer-events: none;
 }
 
@@ -36,7 +38,8 @@
   cursor: pointer;
   opacity: 0;
   transform: translateY(-8px);
-  transition: opacity var(--sts-anim-duration) var(--sts-anim-easing),
+  transition:
+    opacity var(--sts-anim-duration) var(--sts-anim-easing),
     transform var(--sts-anim-duration) var(--sts-anim-easing),
     top 120ms ease-out,
     left 120ms ease-out;
@@ -49,7 +52,7 @@
 }
 
 .sts-tooltip-btn::after {
-  content: '';
+  content: "";
   position: absolute;
   top: -6px;
   left: 10px;
@@ -68,7 +71,9 @@
   display: none;
   opacity: 0;
   visibility: hidden;
-  transition: opacity var(--sts-anim-duration) var(--sts-anim-easing), visibility var(--sts-anim-duration) var(--sts-anim-easing);
+  transition:
+    opacity var(--sts-anim-duration) var(--sts-anim-easing),
+    visibility var(--sts-anim-duration) var(--sts-anim-easing);
 }
 
 .sts-popup.sts-visible {
@@ -89,7 +94,9 @@
   flex-direction: column;
   opacity: 0;
   transform: translateY(16px);
-  transition: opacity var(--sts-anim-duration) var(--sts-anim-easing), transform var(--sts-anim-duration) var(--sts-anim-easing);
+  transition:
+    opacity var(--sts-anim-duration) var(--sts-anim-easing),
+    transform var(--sts-anim-duration) var(--sts-anim-easing);
 }
 
 .sts-popup.sts-visible .sts-popup-inner {
@@ -125,7 +132,7 @@
 
 /* Keep existing loading hint */
 .sts-popup.is-loading .title::after {
-  content: ' • Loading';
+  content: " • Loading";
   color: #6b7280;
   font-weight: 400;
 }
@@ -145,7 +152,9 @@
   cursor: pointer;
 }
 
-.sts-btn:hover { background: #e5e7eb; }
+.sts-btn:hover {
+  background: #e5e7eb;
+}
 
 .sts-content {
   padding: 12px;
@@ -169,9 +178,11 @@
   right: 0;
   /* Remove bottom: 0 to allow natural expansion */
 }
-.sts-layer--skeleton { z-index: 0; }
-.sts-layer--text { 
-  z-index: 1; 
+.sts-layer--skeleton {
+  z-index: 0;
+}
+.sts-layer--text {
+  z-index: 1;
   position: relative; /* Let text layer drive container height */
 }
 
@@ -195,8 +206,12 @@
 }
 
 @keyframes sts-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .sts-error {
@@ -217,22 +232,38 @@
 }
 
 @keyframes sts-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* Smooth transition from skeleton to text */
-.sts-fade { transition: opacity 60ms ease; }
-.sts-content-md.is-visible { opacity: 1 !important; }
-.sts-skeleton.fade-out { opacity: 0.0; transition: opacity 60ms ease-out; }
+.sts-fade {
+  transition: opacity 60ms ease;
+}
+.sts-content-md.is-visible {
+  opacity: 1 !important;
+}
+.sts-skeleton.fade-out {
+  opacity: 0;
+  transition: opacity 60ms ease-out;
+}
 
 /* Allow per-line opacity changes (JS controls delays) */
-.sts-skeleton-line { opacity: 1; }
+.sts-skeleton-line {
+  opacity: 1;
+}
 
 /* Disabled state + loading hint (existing) */
-.sts-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+.sts-btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 .sts-popup.is-loading .title::after {
-  content: ' • Loading';
+  content: " • Loading";
   color: #6b7280;
   font-weight: 400;
 }
@@ -243,4 +274,6 @@
   gap: 6px;
 }
 
-.sts-tooltip-btn { font-size: 12px; }
+.sts-tooltip-btn {
+  font-size: 12px;
+}

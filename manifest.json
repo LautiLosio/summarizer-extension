@@ -1,12 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Smart Text Summarizer",
+  "name": "Selection Summarizer",
   "version": "1.0",
   "description": "Summarize selected text using Chrome's built-in AI",
-  "permissions": [
-    "activeTab",
-    "storage"
-  ],
+  "permissions": ["activeTab", "storage"],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
@@ -16,7 +13,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Smart Text Summarizer"
+    "default_title": "Selection Summarizer"
   },
 
   "icons": {
