@@ -1,3 +1,5 @@
+import { GenerativeTextSurface } from "./lib/generative-text.js"
+
 (() => {
   // Inject font-face rules for Atkinson Hyperlegible
   const fontFaceStyle = document.createElement('style');
@@ -42,9 +44,11 @@
     tooltipEl: null,
     popupEl: null,
     selectionText: "",
+    lastSummary: "",
     minWords: DEFAULT_MIN_WORDS,
     summarizer: null,
     isSummarizing: false,
+    generativeSurface: null,
     performanceMetrics: {
       avgCharsPerSecond: 15,
       runCount: 0,
@@ -198,6 +202,13 @@
 
   const hidePopup = () => state.popupEl?.classList.remove("sts-visible");
 
+  function destroyGenerativeSurface() {
+    try {
+      state.generativeSurface?.stop?.();
+    } catch (_) {}
+    state.generativeSurface = null;
+  }
+
   function setPopupContent(html) {
     const content = ensurePopup().querySelector("#sts-content");
     if (content) content.innerHTML = html;
@@ -210,7 +221,10 @@
   }
 
   async function copySummary() {
-    const text = state.popupEl?.querySelector("#sts-content")?.innerText || "";
+    const text =
+      state.lastSummary ||
+      state.popupEl?.querySelector("#sts-content")?.innerText ||
+      "";
     const copyBtn = state.popupEl?.querySelector(".sts-copy");
     if (!copyBtn) return;
 
@@ -297,6 +311,8 @@
   async function summarizeSelection() {
     if (state.isSummarizing) return;
     state.isSummarizing = true;
+    state.lastSummary = "";
+    destroyGenerativeSurface();
 
     showPopup();
     state.popupEl?.classList.add("is-loading");
@@ -310,42 +326,27 @@
 
     const CONTEXT = "Provide a concise TL;DR oriented to a general audience.";
     setPopupContent(`
-      <div class="sts-stack" id="sts-stack">
-        <div class="sts-skeleton sts-layer sts-layer--skeleton" id="sts-skeleton" aria-hidden="true">
-          <div class="sts-skeleton-line" style="width: 100%"></div>
-          <div class="sts-skeleton-line" style="width: 100%"></div>
-          <div class="sts-skeleton-line" style="width: 100%"></div>
-          <div class="sts-skeleton-line" style="width: 40%"></div>
-        </div>
-        <div class="sts-content-md sts-fade sts-layer sts-layer--text" id="sts-stream-out" style="white-space: pre-wrap; opacity: 0;"></div>
+      <div class="sts-generative-shell">
+        <div class="sts-content-md sts-generative-text" id="sts-generative-text" aria-live="polite"></div>
       </div>
     `);
 
-    // Crossfade skeleton out while streamed text fades in.
-    function startSkeletonFade() {
-      const skeleton = state.popupEl?.querySelector("#sts-skeleton");
-      if (!skeleton) return { stop() {} };
-      skeleton.classList.add("is-hiding");
-      const cleanup = setTimeout(() => skeleton.remove(), 460);
-
-      return {
-        stop() {
-          // Keep no-op so the in-flight crossfade can complete naturally.
-        },
-      };
-    }
-
     const tStartAll = performance.now();
     let outCharCount = 0;
-    let fadeController = null;
 
     try {
+      const generativeContainer = state.popupEl?.querySelector("#sts-generative-text");
+      if (generativeContainer instanceof HTMLElement) {
+        state.generativeSurface = new GenerativeTextSurface(generativeContainer, {
+          charsPerSecond: state.performanceMetrics.avgCharsPerSecond,
+        });
+        await state.generativeSurface.start();
+      }
+
       const summarizer = await ensureSummarizer();
       const text = state.selectionText;
       if (!text) throw new Error("Nothing selected.");
 
-      const container = state.popupEl?.querySelector("#sts-stream-out");
-      const skeleton = state.popupEl?.querySelector("#sts-skeleton");
       let out = "";
       let firstChunk = true;
 
@@ -354,12 +355,9 @@
         const str = String(chunk || "");
         out += str;
         outCharCount += str.length;
-        if (container) container.textContent = out;
         if (firstChunk) {
           firstChunk = false;
           setDownloadStatus("");
-          container?.classList.add("is-visible");
-          fadeController = startSkeletonFade();
         }
       }
 
@@ -367,10 +365,7 @@
         const res = await summarizer.summarize(text, { context: CONTEXT });
         const str = String(res || "");
         outCharCount = str.length;
-        if (container) container.textContent = str;
-        setDownloadStatus("");
-        container?.classList.add("is-visible");
-        fadeController = startSkeletonFade();
+        out = str;
       }
 
       const elapsedSecs = Math.max(
@@ -380,18 +375,16 @@
       const cps = outCharCount / elapsedSecs;
       if (isFinite(cps) && cps > 0) savePerformanceMetrics(cps);
 
-      if (skeleton && !skeleton.classList.contains("is-hiding")) {
-        skeleton.classList.add("is-hiding");
-        setTimeout(() => skeleton.remove(), 280);
-      }
+      state.lastSummary = out;
+      setDownloadStatus("");
+      await state.generativeSurface?.reveal(out);
     } catch (err) {
+      state.lastSummary = "";
+      destroyGenerativeSurface();
       setPopupContent(
         `<div class="sts-error">${err instanceof Error ? err.message : "Failed to summarize."}</div>`,
       );
     } finally {
-      try {
-        fadeController?.stop?.();
-      } catch (_) {}
       state.isSummarizing = false;
       state.popupEl?.classList.remove("is-loading");
       state.popupEl?.querySelector(".sts-copy")?.removeAttribute("disabled");

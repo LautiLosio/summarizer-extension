@@ -84,6 +84,8 @@
   --sts-font-size-base: 14px;
   --sts-font-size-sm: 13px;
   --sts-font-size-xs: 12px;
+  --sts-copy-line-height: 1.45;
+  --sts-copy-letter-spacing: 0px;
 
   --brand-primary: var(--brand-accent);
   --brand-secondary: color-mix(in srgb, var(--brand-accent) 30%, var(--fg));
@@ -409,7 +411,9 @@
 
 .sts-content {
   padding: 12px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   max-height: calc(min(60vh, 520px) - 62px);
   color: var(--sts-text);
   background:
@@ -421,26 +425,16 @@
 .sts-content * {
   color: var(--sts-text);
   font-size: var(--sts-font-size-base) !important;
-  line-height: 1.45;
+  line-height: var(--sts-copy-line-height);
 }
 
-.sts-stack {
-  position: relative;
-  min-height: calc(4 * var(--sts-line-h) + 3 * var(--sts-gap));
+.sts-generative-shell {
+  overflow: hidden;
+  min-height: calc(4 * 1.45em);
 }
 
-.sts-layer {
-  position: absolute;
-  inset: 0;
-}
-
-.sts-layer--skeleton {
-  z-index: 1;
-}
-
-.sts-layer--text {
-  z-index: 0;
-  position: relative;
+.sts-generative-shell.is-height-animating {
+  transition: height 240ms var(--ease-soft);
 }
 
 .sts-loading {
@@ -475,79 +469,65 @@
   box-shadow: var(--sts-inset-highlight), var(--sts-inset-shade), 0 0 0 1px var(--glow-danger);
 }
 
-.sts-skeleton {
-  display: grid;
-  gap: var(--sts-gap);
-  opacity: 1;
-}
-
-.sts-skeleton-line {
-  height: var(--sts-line-h);
-  border-radius: var(--radius-sm);
-  background: var(--sts-bg-skeleton);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
-  background-size: 200% 100%;
-  animation: sts-shimmer 1.2s ease-in-out infinite;
-  transition: opacity 180ms var(--ease-soft), transform 180ms var(--ease-soft);
-}
-
-.sts-fade {
-  transition: opacity var(--dur-fast) var(--ease-soft);
-}
-
 .sts-content-md {
-  opacity: 0;
+  opacity: 1;
+  font-size: var(--sts-font-size-base) !important;
+  font-weight: 400 !important;
+  line-height: var(--sts-copy-line-height);
+  letter-spacing: var(--sts-copy-letter-spacing);
 }
 
-.sts-content-md.is-visible {
-  opacity: 1 !important;
-  transition: opacity 260ms var(--ease-soft);
+.sts-generative-text {
+  color: var(--sts-text);
+  font-size: var(--sts-font-size-base) !important;
+  font-weight: 400 !important;
+  line-height: var(--sts-copy-line-height);
+  letter-spacing: var(--sts-copy-letter-spacing);
+  transition:
+    color 200ms var(--ease-soft),
+    text-shadow 200ms var(--ease-soft),
+    opacity 200ms var(--ease-soft);
 }
 
-.sts-skeleton.is-hiding {
-  opacity: 0;
-  transition: opacity 260ms var(--ease-soft);
-  pointer-events: none;
+.sts-generative-line {
+  display: block;
+  min-height: calc(1em * var(--sts-copy-line-height));
+  font: inherit;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit;
+  letter-spacing: inherit;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: clip;
+  overflow-wrap: normal;
+  word-break: normal;
+  will-change: letter-spacing;
 }
 
-.sts-skeleton-line:nth-child(1) {
-  animation-delay: 0ms;
+.sts-generative-line.is-final {
+  will-change: auto;
 }
 
-.sts-skeleton-line:nth-child(2) {
-  animation-delay: 90ms;
+.sts-generative-line--band {
+  display: flex;
+  align-items: stretch;
 }
 
-.sts-skeleton-line:nth-child(3) {
-  animation-delay: 180ms;
+.sts-generative-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 0 0 auto;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
-.sts-skeleton-line:nth-child(4) {
-  animation-delay: 270ms;
-}
-
-.sts-skeleton.is-hiding .sts-skeleton-line:nth-child(1) {
-  transition-delay: 0ms;
-  opacity: 0;
-  transform: translateY(1px);
-}
-
-.sts-skeleton.is-hiding .sts-skeleton-line:nth-child(2) {
-  transition-delay: 60ms;
-  opacity: 0;
-  transform: translateY(1px);
-}
-
-.sts-skeleton.is-hiding .sts-skeleton-line:nth-child(3) {
-  transition-delay: 120ms;
-  opacity: 0;
-  transform: translateY(1px);
-}
-
-.sts-skeleton.is-hiding .sts-skeleton-line:nth-child(4) {
-  transition-delay: 180ms;
-  opacity: 0;
-  transform: translateY(1px);
+.sts-generative-text.is-animating {
+  font-variant-ligatures: none;
+  font-kerning: none;
+  color: color-mix(in srgb, var(--sts-text) 84%, var(--brand-accent));
+  text-shadow: 0 0 18px rgba(115, 155, 136, 0.14);
 }
 
 @keyframes sts-spin {
@@ -556,15 +536,6 @@
   }
   to {
     transform: rotate(360deg);
-  }
-}
-
-@keyframes sts-shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
   }
 }
 
