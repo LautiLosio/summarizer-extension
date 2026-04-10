@@ -8,10 +8,20 @@ const LETTERS = "abcdefghijklmnopqrstuvwxyz";
 const UPPERCASE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const DIGITS = "0123456789";
 const SYMBOLS = "$&+";
-const PUNCTUATION = ",.\"?!";
+const PUNCTUATION = ',."?!';
 const DASHES = "-";
 const SPACE = " ";
-const ALLOWED_SOURCE_PUNCTUATION = new Set([",", ".", "\"", "?", "!", "$", "&", "+", "-"]);
+const ALLOWED_SOURCE_PUNCTUATION = new Set([
+  ",",
+  ".",
+  '"',
+  "?",
+  "!",
+  "$",
+  "&",
+  "+",
+  "-",
+]);
 const LETTER_RATIO = 0.8;
 const DIGIT_RATIO = 0.08;
 const SPACE_RATIO = 0.08;
@@ -26,7 +36,8 @@ const MAX_FILL_ATTEMPTS = 200;
 const WIDTH_EPSILON = 0.75;
 const DEFAULT_CHARS_PER_SECOND = 16;
 const SPEED_MULTIPLIER = 1.18;
-const RANDOM_TICK_MULTIPLIER = 1.22;
+const RANDOM_TICK_MULTIPLIER = 4;
+const REVEAL_SPEED_MULTIPLIER = 2;
 const graphemeSegmenter =
   typeof Intl !== "undefined" && Intl.Segmenter
     ? new Intl.Segmenter(undefined, { granularity: "grapheme" })
@@ -182,15 +193,20 @@ function createSourceWordEntries(sourceText, measureWidth) {
     .slice(0, MAX_SOURCE_WORDS)
     .flatMap((info) => {
       const display =
-        Array.from(info.forms.entries()).sort((left, right) => right[1] - left[1])[0]?.[0] ||
-        "";
+        Array.from(info.forms.entries()).sort(
+          (left, right) => right[1] - left[1],
+        )[0]?.[0] || "";
       if (!display) return [];
       const trailing = `${display} `;
       const lettersCount = (display.match(/\p{L}/gu) || []).length;
       const digitsCount = (display.match(/\p{N}/gu) || []).length;
       const isMostlyNumeric =
         digitsCount > 0 && digitsCount >= Math.max(lettersCount, 1);
-      const numericPenalty = isMostlyNumeric ? 0.32 : digitsCount > 0 ? 0.62 : 1;
+      const numericPenalty = isMostlyNumeric
+        ? 0.32
+        : digitsCount > 0
+          ? 0.62
+          : 1;
       const weight = Math.min(10, (1 + info.count * 1.4) * numericPenalty);
       return [
         {
@@ -266,7 +282,9 @@ function createGlyphPalette(measureWidth, sourceText = "") {
     spaces,
     words,
     visible,
-    all: [...visible, ...spaces].sort((left, right) => left.width - right.width),
+    all: [...visible, ...spaces].sort(
+      (left, right) => left.width - right.width,
+    ),
     avgVisibleWidth,
     spaceWidth: spaces[0]?.width || measureWidth(" "),
   };
@@ -319,7 +337,12 @@ function createCapitalizedEntry(entry, measureWidth) {
   };
 }
 
-function pickGlyphSet(palette, nextRandom, previousGlyph = "", allowSpace = false) {
+function pickGlyphSet(
+  palette,
+  nextRandom,
+  previousGlyph = "",
+  allowSpace = false,
+) {
   const roll = nextRandom();
   if (allowSpace && roll < SPACE_RATIO) {
     return palette.spaces;
@@ -441,10 +464,7 @@ function buildFittedLine(
             glyphPalette.words,
             remainingWidth,
             nextRandom,
-            Math.max(
-              baseTargetWidth * 2.8,
-              glyphPalette.avgVisibleWidth * 4.5,
-            ),
+            Math.max(baseTargetWidth * 2.8, glyphPalette.avgVisibleWidth * 4.5),
           )
         : null;
     const rawEntry =
@@ -475,7 +495,8 @@ function buildFittedLine(
     if (!entry) break;
 
     const nextWidth = currentWidth + entry.width;
-    const crossesPreferred = currentWidth < preferredWidth && nextWidth > preferredWidth;
+    const crossesPreferred =
+      currentWidth < preferredWidth && nextWidth > preferredWidth;
     const shouldStopBeforeOverflowingPreferred =
       crossesPreferred &&
       currentWidth > 0 &&
@@ -487,7 +508,10 @@ function buildFittedLine(
     currentWidth = nextWidth;
     previousGlyph = entry.lastGlyph || previousGlyph;
 
-    if (currentWidth >= preferredWidth && currentWidth >= maxWidth - minUnitWidth) {
+    if (
+      currentWidth >= preferredWidth &&
+      currentWidth >= maxWidth - minUnitWidth
+    ) {
       break;
     }
   }
@@ -507,7 +531,9 @@ function buildFittedRandomText(
   options = {},
 ) {
   const nextRandom = createSeededRandom(
-    ((tick + 1) * 2654435761 + (rowIndex + 1) * 2246822519 + (salt + 1) * 3266489917) >>>
+    ((tick + 1) * 2654435761 +
+      (rowIndex + 1) * 2246822519 +
+      (salt + 1) * 3266489917) >>>
       0,
   );
   return buildFittedLine(
@@ -540,7 +566,9 @@ function planPlaceholderRows(metrics, measureWidth, glyphPalette) {
     );
     return {
       targetWidth,
-      softWidth: isLastRow ? getLastRowSoftWidth(metrics, glyphPalette) : targetWidth,
+      softWidth: isLastRow
+        ? getLastRowSoftWidth(metrics, glyphPalette)
+        : targetWidth,
       slotCount: Math.max(1, toGraphemes(sample).length),
     };
   });
@@ -551,7 +579,11 @@ function planFinalRows(text, metrics) {
   const prepared = prepareWithSegments(text, metrics.font, {
     whiteSpace: "pre-wrap",
   });
-  const { lines } = layoutWithLines(prepared, metrics.width, metrics.lineHeight);
+  const { lines } = layoutWithLines(
+    prepared,
+    metrics.width,
+    metrics.lineHeight,
+  );
   return lines.map((line) => ({
     width: line.width,
     text: line.text,
@@ -592,7 +624,10 @@ function buildRevealRows(placeholderRows, finalRows, metrics) {
       return {
         index,
         placeholderWidth: placeholderRow?.targetWidth ?? metrics.width,
-        placeholderSoftWidth: placeholderRow?.softWidth ?? placeholderRow?.targetWidth ?? metrics.width,
+        placeholderSoftWidth:
+          placeholderRow?.softWidth ??
+          placeholderRow?.targetWidth ??
+          metrics.width,
         finalWidth: finalRow?.width ?? null,
         finalGraphemes,
         slotCount,
@@ -671,7 +706,10 @@ function buildRevealSnapshot(
 
   for (let index = 0; index < revealRows.length; index += 1) {
     const row = revealRows[index];
-    const resolvedInRow = Math.min(row.finalGraphemes.length, remainingResolved);
+    const resolvedInRow = Math.min(
+      row.finalGraphemes.length,
+      remainingResolved,
+    );
     remainingResolved -= resolvedInRow;
 
     const visiblePadding = visiblePaddingByRow[index] || 0;
@@ -685,16 +723,21 @@ function buildRevealSnapshot(
 
     const resolvedText = row.finalGraphemes.slice(0, resolvedInRow).join("");
     const resolvedWidth = measureWidth(resolvedText);
-    const fullyResolved = visiblePadding === 0 && resolvedInRow === row.finalGraphemes.length;
+    const fullyResolved =
+      visiblePadding === 0 && resolvedInRow === row.finalGraphemes.length;
     let currentWidth = row.finalWidth ?? row.placeholderWidth;
     if (!fullyResolved) {
       currentWidth = isOverflowRow
-        ? row.finalWidth ?? row.placeholderWidth
+        ? (row.finalWidth ?? row.placeholderWidth)
         : row.finalWidth === null
           ? measureVisiblePlaceholderWidth(row, visiblePadding, resolvedWidth)
           : Math.max(
               row.finalWidth,
-              measureVisiblePlaceholderWidth(row, visiblePadding, resolvedWidth),
+              measureVisiblePlaceholderWidth(
+                row,
+                visiblePadding,
+                resolvedWidth,
+              ),
             );
     }
     const previousResolvedGlyph =
@@ -714,7 +757,8 @@ function buildRevealSnapshot(
         preferredWidth: Math.max(0, currentWidth - resolvedWidth),
         maxWidth: Math.max(
           0,
-          (isOverflowRow ? currentWidth : row.placeholderSoftWidth) - resolvedWidth,
+          (isOverflowRow ? currentWidth : row.placeholderSoftWidth) -
+            resolvedWidth,
         ),
       },
     );
@@ -759,6 +803,10 @@ export class GenerativeTextSurface {
       (this.options?.charsPerSecond || DEFAULT_CHARS_PER_SECOND) *
         SPEED_MULTIPLIER,
     );
+  }
+
+  getRevealCharsPerSecond() {
+    return this.getCharsPerSecond() * REVEAL_SPEED_MULTIPLIER;
   }
 
   getLoadingInterval() {
@@ -846,14 +894,20 @@ export class GenerativeTextSurface {
 
     const duration = Math.min(
       4800,
-      Math.max(1100, (totalWork / (this.getCharsPerSecond() * 0.9)) * 1000),
+      Math.max(
+        900,
+        (totalWork / (this.getRevealCharsPerSecond() * 0.9)) * 1000,
+      ),
     );
 
     await new Promise((resolve) => {
       const startedAt = performance.now();
       const step = (now) => {
         const progress = Math.min(1, (now - startedAt) / duration);
-        const resolvedTotal = Math.min(finalTotal, Math.floor(finalTotal * progress));
+        const resolvedTotal = Math.min(
+          finalTotal,
+          Math.floor(finalTotal * progress),
+        );
         const deletedPaddingTotal = Math.min(
           totalPadding,
           Math.floor(totalPadding * progress),
