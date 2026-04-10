@@ -339,6 +339,7 @@ import { GenerativeTextSurface } from "./lib/generative-text.js"
       if (generativeContainer instanceof HTMLElement) {
         state.generativeSurface = new GenerativeTextSurface(generativeContainer, {
           charsPerSecond: state.performanceMetrics.avgCharsPerSecond,
+          sourceText: state.selectionText,
         });
         await state.generativeSurface.start();
       }

@@ -400,6 +400,14 @@
   --btn-glow: var(--glow-danger);
 }
 
+.sts-copy {
+  --btn-glow: transparent;
+}
+
+.sts-copy:focus-visible {
+  box-shadow: var(--sts-btn-shadow-hover), 0 0 0 3px rgba(255, 250, 241, 0.88);
+}
+
 .sts-btn--icon {
   width: 36px;
   min-width: 36px;
