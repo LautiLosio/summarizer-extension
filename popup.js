@@ -49,6 +49,8 @@ function updateSaveAccent() {
   const current = normalizeMinWords(elements.minWordsInput?.value);
   const changed = initialMinWords == null ? false : current !== initialMinWords;
   elements.saveSettingsBtn.classList.toggle("primary", !!changed);
+  elements.saveSettingsBtn.classList.toggle("tactile-btn--primary", !!changed);
+  elements.saveSettingsBtn.classList.toggle("tactile-btn--ghost", !changed);
 }
 
 function showStatus(state, msg = "") {

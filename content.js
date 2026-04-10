@@ -1,8 +1,42 @@
 (() => {
+  // Inject font-face rules for Atkinson Hyperlegible
+  const fontFaceStyle = document.createElement('style');
+  const fontBaseUrl = chrome.runtime.getURL('fonts/');
+  fontFaceStyle.textContent = `
+    @font-face {
+      font-family: 'Atkinson Hyperlegible';
+      src: url('${fontBaseUrl}AtkinsonHyperlegible-Regular.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Atkinson Hyperlegible';
+      src: url('${fontBaseUrl}AtkinsonHyperlegible-Bold.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Atkinson Hyperlegible';
+      src: url('${fontBaseUrl}AtkinsonHyperlegible-Italic.ttf') format('truetype');
+      font-weight: 400;
+      font-style: italic;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Atkinson Hyperlegible';
+      src: url('${fontBaseUrl}AtkinsonHyperlegible-BoldItalic.ttf') format('truetype');
+      font-weight: 700;
+      font-style: italic;
+      font-display: swap;
+    }
+  `;
+  document.head.appendChild(fontFaceStyle);
+
   const CONFIG_KEY = "sts_config";
   const PERFORMANCE_KEY = "sts_performance";
   const DEFAULT_MIN_WORDS = 40;
-  const CHARS_PER_LINE = 61;
 
   const state = {
     tooltipEl: null,
@@ -60,7 +94,7 @@
     const el = document.createElement("div");
     el.className = "sts-tooltip";
     el.innerHTML = `<div class="sts-tooltip-btn" aria-label="Summarize selection" title="Summarize selection">
-      📝 Summarize
+      Summarize
     </div>`;
 
     el.addEventListener("transitionend", (e) => {
@@ -91,8 +125,8 @@
         <div class="sts-popup-header">
           <div class="title">Summary <span id="sts-download" class="sts-download" aria-live="polite"></span></div>
           <div class="actions">
-            <button class="sts-btn sts-copy">Copy</button>
-            <button class="sts-btn sts-close">Close</button>
+            <button class="sts-btn sts-btn--tinted sts-copy">Copy</button>
+            <button class="sts-btn sts-btn--ghost sts-btn--icon sts-close" aria-label="Close summary" title="Close summary">×</button>
           </div>
         </div>
         <div class="sts-content" id="sts-content">
@@ -177,17 +211,46 @@
 
   async function copySummary() {
     const text = state.popupEl?.querySelector("#sts-content")?.innerText || "";
+    const copyBtn = state.popupEl?.querySelector(".sts-copy");
+    if (!copyBtn) return;
+
+    const resetCopyState = () => {
+      copyBtn.textContent = "Copy";
+      copyBtn.classList.remove("sts-btn--success", "sts-btn--danger");
+      copyBtn.classList.add("sts-btn--tinted");
+    };
+
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
-    } catch (_) {}
+      copyBtn.textContent = "Copied";
+      copyBtn.classList.remove("sts-btn--tinted", "sts-btn--danger");
+      copyBtn.classList.add("sts-btn--success");
+    } catch (_) {
+      copyBtn.textContent = "Retry";
+      copyBtn.classList.remove("sts-btn--tinted", "sts-btn--success");
+      copyBtn.classList.add("sts-btn--danger");
+    } finally {
+      setTimeout(resetCopyState, 1300);
+    }
   }
 
   const countWords = (text) => (text.trim().match(/\b\w+\b/g) || []).length;
+  const normalizeSelectionText = (text) => String(text || "").trim();
 
   function getSelectionText() {
     const sel = window.getSelection();
     return !sel || sel.rangeCount === 0 ? "" : sel.toString();
+  }
+
+  function triggerSummary(text) {
+    const normalizedText = normalizeSelectionText(text);
+    if (!normalizedText) return false;
+
+    state.selectionText = normalizedText;
+    hideTooltip();
+    summarizeSelection();
+    return true;
   }
 
   function onSelectionChange() {
@@ -239,6 +302,11 @@
     state.popupEl?.classList.add("is-loading");
     const copyBtn = state.popupEl?.querySelector(".sts-copy");
     copyBtn?.setAttribute("disabled", "true");
+    if (copyBtn) {
+      copyBtn.textContent = "Copy";
+      copyBtn.classList.remove("sts-btn--success", "sts-btn--danger");
+      copyBtn.classList.add("sts-btn--tinted");
+    }
 
     const CONTEXT = "Provide a concise TL;DR oriented to a general audience.";
     setPopupContent(`
@@ -253,39 +321,16 @@
       </div>
     `);
 
-    // Fade out skeleton lines at a pace derived from chars/sec estimate
-    function startSkeletonFade(cpsEstimate) {
+    // Crossfade skeleton out while streamed text fades in.
+    function startSkeletonFade() {
       const skeleton = state.popupEl?.querySelector("#sts-skeleton");
-      const lines = skeleton
-        ? Array.from(skeleton.querySelectorAll(".sts-skeleton-line"))
-        : [];
-      if (!skeleton || !lines.length) return { stop() {} };
-
-      const secsPerLine = CHARS_PER_LINE / Math.max(1, cpsEstimate);
-      const handles = lines.map((line, idx) =>
-        setTimeout(
-          () => {
-            line.style.transition =
-              "opacity 400ms cubic-bezier(0.4, 0, 0.2, 1)";
-            line.style.opacity = "0";
-          },
-          secsPerLine * idx * 1000,
-        ),
-      );
-
-      // Remove skeleton a bit later after last line fade completes
-      const cleanup = setTimeout(
-        () => {
-          skeleton.classList.add("fade-out");
-          setTimeout(() => skeleton.remove(), 250);
-        },
-        secsPerLine * (lines.length - 1) * 1000 + 260,
-      );
-      handles.push(cleanup);
+      if (!skeleton) return { stop() {} };
+      skeleton.classList.add("is-hiding");
+      const cleanup = setTimeout(() => skeleton.remove(), 460);
 
       return {
         stop() {
-          handles.forEach(clearTimeout);
+          // Keep no-op so the in-flight crossfade can complete naturally.
         },
       };
     }
@@ -313,10 +358,8 @@
         if (firstChunk) {
           firstChunk = false;
           setDownloadStatus("");
-          fadeController = startSkeletonFade(
-            state.performanceMetrics.avgCharsPerSecond,
-          );
-          if (skeleton) container?.classList.add("is-visible");
+          container?.classList.add("is-visible");
+          fadeController = startSkeletonFade();
         }
       }
 
@@ -326,10 +369,8 @@
         outCharCount = str.length;
         if (container) container.textContent = str;
         setDownloadStatus("");
-        fadeController = startSkeletonFade(
-          state.performanceMetrics.avgCharsPerSecond,
-        );
-        if (skeleton) container?.classList.add("is-visible");
+        container?.classList.add("is-visible");
+        fadeController = startSkeletonFade();
       }
 
       const elapsedSecs = Math.max(
@@ -339,9 +380,9 @@
       const cps = outCharCount / elapsedSecs;
       if (isFinite(cps) && cps > 0) savePerformanceMetrics(cps);
 
-      if (skeleton) {
-        skeleton.classList.add("fade-out");
-        setTimeout(() => skeleton.remove(), 250);
+      if (skeleton && !skeleton.classList.contains("is-hiding")) {
+        skeleton.classList.add("is-hiding");
+        setTimeout(() => skeleton.remove(), 280);
       }
     } catch (err) {
       setPopupContent(
@@ -360,8 +401,7 @@
 
   function onTooltipClick() {
     window.getSelection()?.removeAllRanges();
-    hideTooltip();
-    summarizeSelection();
+    triggerSummary(state.selectionText);
   }
 
   function isSelectionInView(rect) {
@@ -431,6 +471,11 @@
     true,
   );
   window.addEventListener("resize", updateTooltipPositionIfNeeded);
+
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type !== "sts-manual-summarize") return;
+    sendResponse({ ok: triggerSummary(message.selectionText) });
+  });
 
   loadConfig();
 })();

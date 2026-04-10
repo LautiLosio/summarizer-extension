@@ -13,13 +13,13 @@
 
     <div id="container" class="container">
       <!-- Loading state -->
-      <div id="status-loading" class="status-card">
+      <div id="status-loading" class="status-card status-card--active">
         <div class="icon">⏳</div>
         <div class="title">Checking readiness...</div>
       </div>
 
       <!-- Ready state -->
-      <div id="status-ready" class="status-card hidden">
+      <div id="status-ready" class="status-card status-card--success hidden">
         <div class="icon">✅</div>
         <div class="title">Ready to Summarize</div>
         <div class="message">
@@ -31,26 +31,28 @@
             <input id="minWords" type="number" min="1" />
           </div>
           <div class="row center">
-            <button id="save-settings-btn">Save Settings</button>
+            <button id="save-settings-btn" class="tactile-btn tactile-btn--ghost">
+              Save Settings
+            </button>
             <span id="save-status" class="small"></span>
           </div>
         </div>
       </div>
 
       <!-- Download state -->
-      <div id="status-download" class="status-card hidden">
+      <div id="status-download" class="status-card status-card--warning hidden">
         <div class="icon">📦</div>
         <div class="title">Model Download Required</div>
         <div class="message">
           The summarizer needs to download a small model to work offline.
         </div>
-        <button id="download-btn" class="primary" style="margin-top: 12px">
+        <button id="download-btn" class="tactile-btn tactile-btn--primary">
           Download Model
         </button>
       </div>
 
       <!-- Downloading state -->
-      <div id="status-downloading" class="status-card hidden">
+      <div id="status-downloading" class="status-card status-card--warning status-card--pulse hidden">
         <div class="icon">📥</div>
         <div class="title">Downloading Model...</div>
         <div id="download-progress-text" class="message"></div>
@@ -60,7 +62,7 @@
       </div>
 
       <!-- Error state -->
-      <div id="status-error" class="status-card hidden">
+      <div id="status-error" class="status-card status-card--danger hidden">
         <div class="icon">❌</div>
         <div class="title">Summarizer Not Available</div>
         <div id="error-message" class="message">
