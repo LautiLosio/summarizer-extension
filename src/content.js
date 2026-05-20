@@ -129,8 +129,8 @@ import { GenerativeTextSurface } from "./lib/generative-text.js"
         <div class="sts-popup-header">
           <div class="title">Summary <span id="sts-download" class="sts-download" aria-live="polite"></span></div>
           <div class="actions">
-            <button class="sts-btn sts-btn--tinted sts-copy">Copy</button>
-            <button class="sts-btn sts-btn--ghost sts-btn--icon sts-close" aria-label="Close summary" title="Close summary">×</button>
+            <button class="sts-btn sts-btn--ghost sts-copy">Copy</button>
+            <button class="sts-btn sts-btn--ghost sts-btn--icon sts-close" aria-label="Close summary" title="Close summary"><span aria-hidden="true">×</span></button>
           </div>
         </div>
         <div class="sts-content" id="sts-content">
@@ -230,20 +230,14 @@ import { GenerativeTextSurface } from "./lib/generative-text.js"
 
     const resetCopyState = () => {
       copyBtn.textContent = "Copy";
-      copyBtn.classList.remove("sts-btn--success", "sts-btn--danger");
-      copyBtn.classList.add("sts-btn--tinted");
     };
 
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
       copyBtn.textContent = "Copied";
-      copyBtn.classList.remove("sts-btn--tinted", "sts-btn--danger");
-      copyBtn.classList.add("sts-btn--success");
     } catch (_) {
       copyBtn.textContent = "Retry";
-      copyBtn.classList.remove("sts-btn--tinted", "sts-btn--success");
-      copyBtn.classList.add("sts-btn--danger");
     } finally {
       setTimeout(resetCopyState, 1300);
     }
@@ -320,8 +314,6 @@ import { GenerativeTextSurface } from "./lib/generative-text.js"
     copyBtn?.setAttribute("disabled", "true");
     if (copyBtn) {
       copyBtn.textContent = "Copy";
-      copyBtn.classList.remove("sts-btn--success", "sts-btn--danger");
-      copyBtn.classList.add("sts-btn--tinted");
     }
 
     const CONTEXT = "Provide a concise TL;DR oriented to a general audience.";

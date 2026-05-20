@@ -163,26 +163,24 @@
 
 .sts-tooltip-btn {
   position: absolute;
+  --btn-bg: var(--surface-1);
+  --btn-topcoat: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08));
+  --btn-border: var(--sts-separator);
+  --btn-glow: transparent;
   min-width: 102px;
-  min-height: 40px;
-  padding: 8px 12px;
+  min-height: 36px;
+  padding: 6px 12px;
   border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--fg) 16%, white);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.12)),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--bg) 88%, white) 0%,
-      color-mix(in srgb, var(--surface-1) 74%, var(--surface-2)) 100%
-    );
+  border: 1px solid var(--btn-border);
+  background: var(--btn-topcoat), var(--btn-bg);
   color: var(--sts-text);
   font-size: var(--sts-font-size-sm) !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
   outline: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--sts-btn-shadow-rest), 0 0 0 1px transparent;
+  box-shadow: var(--sts-btn-shadow-rest);
   cursor: pointer;
   opacity: 0;
   transform: translateY(var(--sts-tooltip-y, -8px));
@@ -199,19 +197,19 @@
 }
 
 .sts-tooltip-btn:hover {
-  box-shadow: var(--sts-btn-shadow-hover), 0 0 0 1px rgba(255, 255, 255, 0.34);
+  box-shadow: var(--sts-btn-shadow-hover), 0 0 0 1px var(--btn-glow);
   filter: saturate(1.04);
   --sts-tooltip-y: 0px;
 }
 
 .sts-tooltip-btn:active {
-  box-shadow: var(--sts-btn-shadow-press), 0 0 0 1px rgba(255, 255, 255, 0.34);
+  box-shadow: var(--sts-btn-shadow-press), 0 0 0 1px var(--btn-glow);
   --sts-tooltip-y: 0px;
   transform: translateY(var(--sts-tooltip-y)) scale(0.96);
 }
 
 .sts-tooltip-btn:focus-visible {
-  box-shadow: var(--sts-btn-shadow-hover), 0 0 0 3px rgba(255, 250, 241, 0.88);
+  box-shadow: var(--sts-btn-shadow-hover), 0 0 0 3px var(--sts-focus-ring);
 }
 
 .sts-tooltip.sts-visible .sts-tooltip-btn {
@@ -342,7 +340,7 @@
   background: var(--btn-topcoat), var(--btn-bg);
   color: var(--btn-color);
   font-size: var(--sts-font-size-sm) !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
   outline: none;
   cursor: pointer;
   box-shadow: var(--sts-btn-shadow-rest);
@@ -400,14 +398,6 @@
   --btn-glow: var(--glow-danger);
 }
 
-.sts-copy {
-  --btn-glow: transparent;
-}
-
-.sts-copy:focus-visible {
-  box-shadow: var(--sts-btn-shadow-hover), 0 0 0 3px rgba(255, 250, 241, 0.88);
-}
-
 .sts-btn--icon {
   width: 36px;
   min-width: 36px;
@@ -415,6 +405,18 @@
   font-size: 18px !important;
   border-radius: var(--radius-pill);
   line-height: 1;
+  display: inline-grid;
+  place-items: center;
+}
+
+.sts-close {
+  font-size: 20px !important;
+}
+
+.sts-close > span {
+  display: block;
+  line-height: 1;
+  transform: translateY(-0.5px);
 }
 
 .sts-content {

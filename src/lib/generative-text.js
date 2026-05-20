@@ -38,6 +38,9 @@ const DEFAULT_CHARS_PER_SECOND = 16;
 const SPEED_MULTIPLIER = 1.18;
 const RANDOM_TICK_MULTIPLIER = 4;
 const REVEAL_SPEED_MULTIPLIER = 2;
+const RECENT_WORD_WINDOW = 4;
+const LOADING_GLYPH_PRESERVE_RATIO = 0.14;
+const LOADING_FRAME_INTERVAL = 32;
 const graphemeSegmenter =
   typeof Intl !== "undefined" && Intl.Segmenter
     ? new Intl.Segmenter(undefined, { granularity: "grapheme" })
@@ -183,6 +186,7 @@ function createSourceWordEntries(sourceText, measureWidth) {
       continue;
     }
     counts.set(normalized, {
+      normalized,
       count: 1,
       forms: new Map([[word, 1]]),
     });
@@ -214,12 +218,21 @@ function createSourceWordEntries(sourceText, measureWidth) {
           width: measureWidth(display),
           weight,
           lastGlyph: toGraphemes(display).slice(-1)[0] || display,
+          wordKey: info.normalized,
+        },
+        {
+          glyph: ` ${display}`,
+          width: measureWidth(` ${display}`),
+          weight: weight * 0.95,
+          lastGlyph: toGraphemes(display).slice(-1)[0] || display,
+          wordKey: info.normalized,
         },
         {
           glyph: trailing,
           width: measureWidth(trailing),
           weight: weight * 1.15,
           lastGlyph: " ",
+          wordKey: info.normalized,
         },
       ];
     })
@@ -229,19 +242,26 @@ function createSourceWordEntries(sourceText, measureWidth) {
 function createGlyphPalette(measureWidth, sourceText = "") {
   const sourceSets = createSourceGlyphSets(sourceText);
   const words = createSourceWordEntries(sourceText, measureWidth);
+  const wordsOnly = words.length > 0;
   const letters = createGlyphEntries(
-    mergeGlyphSources(Array.from(sourceSets.letters).join(""), LETTERS),
+    wordsOnly
+      ? ""
+      : mergeGlyphSources(Array.from(sourceSets.letters).join(""), LETTERS),
     measureWidth,
   );
   const uppercaseLetters = createGlyphEntries(
-    mergeGlyphSources(
-      Array.from(sourceSets.uppercaseLetters).join(""),
-      UPPERCASE_LETTERS,
-    ),
+    wordsOnly
+      ? ""
+      : mergeGlyphSources(
+          Array.from(sourceSets.uppercaseLetters).join(""),
+          UPPERCASE_LETTERS,
+        ),
     measureWidth,
   );
   const digits = createGlyphEntries(
-    mergeGlyphSources(Array.from(sourceSets.digits).join(""), DIGITS),
+    wordsOnly
+      ? ""
+      : mergeGlyphSources(Array.from(sourceSets.digits).join(""), DIGITS),
     measureWidth,
   );
   const symbols = createGlyphEntries(
@@ -268,11 +288,53 @@ function createGlyphPalette(measureWidth, sourceText = "") {
     ...punctuation,
     ...dashes,
   ];
+  const loadingGlyphs = {
+    letters: Array.from(sourceSets.letters),
+    uppercaseLetters: Array.from(sourceSets.uppercaseLetters),
+    digits: Array.from(sourceSets.digits),
+    punctuation: Array.from(sourceSets.punctuation),
+    dashes: Array.from(sourceSets.dashes),
+    symbols: Array.from(sourceSets.symbols),
+  };
+  loadingGlyphs.visible = [
+    ...loadingGlyphs.letters,
+    ...loadingGlyphs.uppercaseLetters,
+    ...loadingGlyphs.digits,
+    ...loadingGlyphs.punctuation,
+    ...loadingGlyphs.dashes,
+    ...loadingGlyphs.symbols,
+  ];
+  if (loadingGlyphs.visible.length === 0) {
+    loadingGlyphs.visible = visible.map((entry) => entry.glyph).filter(Boolean);
+  }
+  if (loadingGlyphs.letters.length === 0) {
+    loadingGlyphs.letters = letters.map((entry) => entry.glyph).filter(Boolean);
+  }
+  if (loadingGlyphs.uppercaseLetters.length === 0) {
+    loadingGlyphs.uppercaseLetters = uppercaseLetters
+      .map((entry) => entry.glyph)
+      .filter(Boolean);
+  }
+  if (loadingGlyphs.digits.length === 0) {
+    loadingGlyphs.digits = digits.map((entry) => entry.glyph).filter(Boolean);
+  }
+  if (loadingGlyphs.punctuation.length === 0) {
+    loadingGlyphs.punctuation = punctuation
+      .map((entry) => entry.glyph)
+      .filter(Boolean);
+  }
+  if (loadingGlyphs.dashes.length === 0) {
+    loadingGlyphs.dashes = dashes.map((entry) => entry.glyph).filter(Boolean);
+  }
+  if (loadingGlyphs.symbols.length === 0) {
+    loadingGlyphs.symbols = symbols.map((entry) => entry.glyph).filter(Boolean);
+  }
   const avgVisibleWidth =
     visible.reduce((sum, entry) => sum + entry.width, 0) /
     Math.max(1, visible.length);
 
   return {
+    wordsOnly,
     letters,
     uppercaseLetters,
     digits,
@@ -281,6 +343,7 @@ function createGlyphPalette(measureWidth, sourceText = "") {
     dashes,
     spaces,
     words,
+    loadingGlyphs,
     visible,
     all: [...visible, ...spaces].sort(
       (left, right) => left.width - right.width,
@@ -303,6 +366,57 @@ function getLastRowSoftWidth(metrics, glyphPalette) {
     metrics.width * TARGET_LAST_LINE_SOFT_RATIO,
     metrics.width * TARGET_LAST_LINE_RATIO + glyphPalette.avgVisibleWidth * 6,
   );
+}
+
+function pickRandomGlyph(glyphs, nextRandom) {
+  if (!glyphs || glyphs.length === 0) return "";
+  return glyphs[Math.floor(nextRandom() * glyphs.length)] || "";
+}
+
+function pickScrambleGlyph(originalGlyph, glyphPalette, nextRandom) {
+  if (originalGlyph === " ") return " ";
+
+  const loadingGlyphs = glyphPalette.loadingGlyphs;
+  const kind = classifyGlyph(originalGlyph);
+  const fallbackGlyph =
+    pickRandomGlyph(loadingGlyphs.visible, nextRandom) || originalGlyph;
+
+  if (nextRandom() < LOADING_GLYPH_PRESERVE_RATIO) {
+    return originalGlyph;
+  }
+
+  switch (kind) {
+    case "letters":
+      return pickRandomGlyph(loadingGlyphs.letters, nextRandom) || fallbackGlyph;
+    case "uppercaseLetters":
+      return (
+        pickRandomGlyph(loadingGlyphs.uppercaseLetters, nextRandom) ||
+        pickRandomGlyph(loadingGlyphs.letters, nextRandom)?.toLocaleUpperCase() ||
+        fallbackGlyph
+      );
+    case "digits":
+      return pickRandomGlyph(loadingGlyphs.digits, nextRandom) || fallbackGlyph;
+    case "punctuation":
+      return (
+        pickRandomGlyph(loadingGlyphs.punctuation, nextRandom) || fallbackGlyph
+      );
+    case "dashes":
+      return pickRandomGlyph(loadingGlyphs.dashes, nextRandom) || fallbackGlyph;
+    case "symbols":
+      return pickRandomGlyph(loadingGlyphs.symbols, nextRandom) || fallbackGlyph;
+    default:
+      return fallbackGlyph;
+  }
+}
+
+function scrambleLoadingText(text, glyphPalette, tick = 0, rowIndex = 0) {
+  const nextRandom = createSeededRandom(
+    ((tick + 1) * 1597334677 + (rowIndex + 1) * 3812015801) >>> 0,
+  );
+
+  return toGraphemes(text)
+    .map((glyph) => pickScrambleGlyph(glyph, glyphPalette, nextRandom))
+    .join("");
 }
 
 function createSeededRandom(seed) {
@@ -371,7 +485,28 @@ function pickGlyphSet(
   return palette.symbols;
 }
 
-function pickFittingEntry(entries, remainingWidth, nextRandom, targetWidth) {
+function getEntryWeight(entry, recentWordKeys = []) {
+  let weight = entry.weight || 1;
+  if (!entry.wordKey || recentWordKeys.length === 0) return weight;
+
+  const reverseIndex = recentWordKeys.lastIndexOf(entry.wordKey);
+  if (reverseIndex === -1) return weight;
+
+  const distanceFromEnd = recentWordKeys.length - 1 - reverseIndex;
+  if (distanceFromEnd === 0) return weight * 0.08;
+  if (distanceFromEnd === 1) return weight * 0.18;
+  if (distanceFromEnd === 2) return weight * 0.35;
+  return weight * 0.6;
+}
+
+function pickFittingEntry(
+  entries,
+  remainingWidth,
+  nextRandom,
+  targetWidth,
+  options = {},
+) {
+  const recentWordKeys = options.recentWordKeys || [];
   const fitting = [];
   for (let index = 0; index < entries.length; index += 1) {
     const entry = entries[index];
@@ -389,9 +524,9 @@ function pickFittingEntry(entries, remainingWidth, nextRandom, targetWidth) {
     (left, right) =>
       Math.abs(left.width - pivot) - Math.abs(right.width - pivot),
   );
-  const candidates = fitting.slice(0, Math.min(8, fitting.length));
+  const candidates = fitting.slice(0, Math.min(12, fitting.length));
   const totalWeight = candidates.reduce(
-    (sum, candidate) => sum + (candidate.weight || 1),
+    (sum, candidate) => sum + getEntryWeight(candidate, recentWordKeys),
     0,
   );
   if (totalWeight <= 0) {
@@ -401,7 +536,7 @@ function pickFittingEntry(entries, remainingWidth, nextRandom, targetWidth) {
   let threshold = nextRandom() * totalWeight;
   for (let index = 0; index < candidates.length; index += 1) {
     const candidate = candidates[index];
-    threshold -= candidate.weight || 1;
+    threshold -= getEntryWeight(candidate, recentWordKeys);
     if (threshold <= 0) return candidate;
   }
   return candidates[candidates.length - 1] || null;
@@ -419,6 +554,7 @@ function buildFittedLine(
   const preferredWidth = options.preferredWidth ?? targetWidth;
   const maxWidth = Math.max(targetWidth, options.maxWidth ?? targetWidth);
   if (targetWidth <= WIDTH_EPSILON) return "";
+  if (glyphPalette.wordsOnly && glyphPalette.words.length === 0) return "";
 
   const thinWidth = Math.min(
     measureWidth("i"),
@@ -433,6 +569,7 @@ function buildFittedLine(
   let currentWidth = 0;
   let attempts = 0;
   let previousGlyph = initialPreviousGlyph;
+  const recentWordKeys = [];
 
   while (
     attempts < MAX_FILL_ATTEMPTS &&
@@ -450,25 +587,72 @@ function buildFittedLine(
       maxWidth - currentWidth > glyphPalette.avgVisibleWidth * 2.2;
     const canUseWord =
       glyphPalette.words.length > 0 &&
-      (line.length === 0 || previousGlyph === " ") &&
+      (line.length === 0 || previousGlyph === " " || glyphPalette.wordsOnly) &&
       maxWidth - currentWidth > glyphPalette.avgVisibleWidth * 2.4;
+    const preferredWordEntry = canUseWord
+      ? pickFittingEntry(
+          glyphPalette.words,
+          remainingWidth,
+          nextRandom,
+          Math.max(baseTargetWidth * 2.8, glyphPalette.avgVisibleWidth * 4.5),
+          { recentWordKeys },
+        )
+      : null;
+    if (glyphPalette.wordsOnly) {
+      const entry =
+        forceCapitalizedStart && line.length === 0
+          ? createCapitalizedEntry(preferredWordEntry, measureWidth)
+          : preferredWordEntry;
+
+      if (!entry) break;
+
+      const nextWidth = currentWidth + entry.width;
+      const crossesPreferred =
+        currentWidth < preferredWidth && nextWidth > preferredWidth;
+      const shouldStopBeforeOverflowingPreferred =
+        crossesPreferred &&
+        currentWidth > 0 &&
+        (entry.glyph.endsWith(" ") || entry.glyph.startsWith(" "));
+
+      if (shouldStopBeforeOverflowingPreferred) break;
+
+      line += entry.glyph;
+      currentWidth = nextWidth;
+      previousGlyph = entry.lastGlyph || previousGlyph;
+      if (entry.wordKey) {
+        recentWordKeys.push(entry.wordKey);
+        if (recentWordKeys.length > RECENT_WORD_WINDOW) {
+          recentWordKeys.shift();
+        }
+      }
+
+      if (
+        currentWidth >= preferredWidth &&
+        currentWidth >= maxWidth - minUnitWidth
+      ) {
+        break;
+      }
+
+      continue;
+    }
     const preferredSet = pickGlyphSet(
       glyphPalette,
       nextRandom,
       previousGlyph,
       allowSpace,
     );
-    const preferredWordEntry =
+    const weightedWordEntry =
       canUseWord && nextRandom() < WORD_TOKEN_RATIO
         ? pickFittingEntry(
             glyphPalette.words,
             remainingWidth,
             nextRandom,
             Math.max(baseTargetWidth * 2.8, glyphPalette.avgVisibleWidth * 4.5),
+            { recentWordKeys },
           )
         : null;
     const rawEntry =
-      preferredWordEntry ||
+      weightedWordEntry ||
       pickFittingEntry(
         preferredSet,
         remainingWidth,
@@ -507,6 +691,12 @@ function buildFittedLine(
     line += entry.glyph;
     currentWidth = nextWidth;
     previousGlyph = entry.lastGlyph || previousGlyph;
+    if (entry.wordKey) {
+      recentWordKeys.push(entry.wordKey);
+      if (recentWordKeys.length > RECENT_WORD_WINDOW) {
+        recentWordKeys.shift();
+      }
+    }
 
     if (
       currentWidth >= preferredWidth &&
@@ -663,7 +853,7 @@ function measureVisiblePlaceholderWidth(row, visiblePadding, resolvedWidth) {
 
 function buildLoadingSnapshot(rows, glyphPalette, measureWidth, tick = 0) {
   return rows.map((row, index) => {
-    const text = buildFittedRandomText(
+    const baseText = buildFittedRandomText(
       row.targetWidth,
       glyphPalette,
       measureWidth,
@@ -677,6 +867,7 @@ function buildLoadingSnapshot(rows, glyphPalette, measureWidth, tick = 0) {
         maxWidth: row.softWidth ?? row.targetWidth,
       },
     );
+    const text = scrambleLoadingText(baseText, glyphPalette, tick, index);
 
     return {
       mode: "animated",
@@ -789,7 +980,8 @@ export class GenerativeTextSurface {
     this.shell = element.parentElement ?? element;
     this.options = options;
     this.sourceText = String(options?.sourceText || "");
-    this.loadingTimer = null;
+    this.loadingFrame = null;
+    this.loadingLastTickAt = 0;
     this.revealFrame = null;
     this.metrics = null;
     this.measureWidth = null;
@@ -851,16 +1043,24 @@ export class GenerativeTextSurface {
     if (prefersReducedMotion()) return;
 
     this.element.classList.add("is-animating");
-    this.loadingTimer = window.setInterval(() => {
-      this.renderRows(
-        buildLoadingSnapshot(
-          this.placeholderRows,
-          this.glyphPalette,
-          this.measureWidth,
-          performance.now(),
-        ),
-      );
-    }, this.getLoadingInterval());
+    this.loadingLastTickAt = performance.now();
+    const step = (now) => {
+      if (now - this.loadingLastTickAt >= LOADING_FRAME_INTERVAL) {
+        this.loadingLastTickAt = now;
+        this.renderRows(
+          buildLoadingSnapshot(
+            this.placeholderRows,
+            this.glyphPalette,
+            this.measureWidth,
+            now,
+          ),
+        );
+      }
+
+      this.loadingFrame = window.requestAnimationFrame(step);
+    };
+
+    this.loadingFrame = window.requestAnimationFrame(step);
   }
 
   async reveal(text) {
@@ -957,10 +1157,11 @@ export class GenerativeTextSurface {
   }
 
   stopLoading() {
-    if (this.loadingTimer !== null) {
-      window.clearInterval(this.loadingTimer);
-      this.loadingTimer = null;
+    if (this.loadingFrame !== null) {
+      window.cancelAnimationFrame(this.loadingFrame);
+      this.loadingFrame = null;
     }
+    this.loadingLastTickAt = 0;
   }
 
   setShellHeight(height, animate) {
