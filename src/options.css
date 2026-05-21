@@ -168,21 +168,23 @@ button,
   border: 2px solid var(--border);
   border-radius: 0;
   background: var(--surface);
+  box-shadow: inset 0 0 0 0 var(--border);
   color: var(--text);
   cursor: pointer;
   font-size: 12px;
   font-weight: 800;
+  outline: none;
   transition:
-    background 100ms var(--ease),
+    box-shadow 100ms var(--ease),
     color 100ms var(--ease),
-    opacity 100ms var(--ease),
-    transform 90ms var(--ease);
+    opacity 100ms var(--ease);
+  will-change: box-shadow, color, opacity;
 }
 
-button:hover,
-.tactile-btn:hover,
-.quiet-button:hover {
-  background: var(--surface-soft);
+button:not(:disabled):hover,
+.tactile-btn:not(:disabled):hover,
+.quiet-button:not(:disabled):hover {
+  box-shadow: inset 0 0 0 2px var(--border);
 }
 
 button:disabled,
@@ -194,23 +196,27 @@ button:disabled,
 button:active:not(:disabled),
 .tactile-btn:active:not(:disabled),
 .quiet-button:active:not(:disabled) {
-  transform: translateY(1px);
+  color: var(--background);
+  box-shadow: inset 0 0 0 20px var(--border);
+}
+
+button[data-copy-flag] {
+  min-width: 90px;
+}
+
+#save-settings-btn {
+  min-width: 100px;
 }
 
 .option-icon {
   flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  stroke-width: 2.4;
+  width: 16px;
+  height: 16px;
 }
 
 .tactile-btn--primary {
   background: var(--primary);
   color: var(--background);
-}
-
-.tactile-btn--primary:hover {
-  background: var(--primary-hover);
 }
 
 .checklist,

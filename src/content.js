@@ -1,5 +1,5 @@
 import { Readability } from "@mozilla/readability";
-import { ArrowLeft, Copy, Square, X, createElement } from "lucide";
+import { createFilledIcon } from "./lib/filled-icons.js";
 
 (() => {
   const CONFIG_KEY = "sts_config";
@@ -34,10 +34,10 @@ import { ArrowLeft, Copy, Square, X, createElement } from "lucide";
     summaryLength: ["short", "medium", "long"],
   };
   const ICONS = {
-    back: ArrowLeft,
-    copy: Copy,
-    close: X,
-    stop: Square,
+    back: "back",
+    copy: "copy",
+    close: "x",
+    stop: "stop",
   };
   const MAX_CONTEXT_CHARS = 18000;
   const MAX_SELECTION_CHARS = 12000;
@@ -288,7 +288,6 @@ import { ArrowLeft, Copy, Square, X, createElement } from "lucide";
             <button class="sts-btn sts-btn--ghost sts-btn--icon sts-close" type="button" aria-label="Close assistant" title="Close assistant"></button>
           </div>
         </div>
-        <div id="sts-download" class="sts-status-line" aria-live="polite"></div>
         <div class="sts-content" id="sts-content">
           <div class="sts-empty"></div>
         </div>
@@ -329,7 +328,8 @@ import { ArrowLeft, Copy, Square, X, createElement } from "lucide";
     ) {
       return;
     }
-    const icon = createElement(iconNode);
+    const icon = createFilledIcon(iconNode);
+    if (!icon) return;
     icon.setAttribute("aria-hidden", "true");
     icon.classList.add("sts-icon");
     button.textContent = "";
@@ -350,8 +350,12 @@ import { ArrowLeft, Copy, Square, X, createElement } from "lucide";
   }
 
   function setDownloadStatus(message) {
-    const status = ensurePanel().querySelector("#sts-download");
+    const status = ensurePanel().querySelector("#sts-stream-status");
     if (status) status.textContent = message || "";
+  }
+
+  function clearDownloadStatus() {
+    setDownloadStatus("");
   }
 
   function setRunning(isRunning) {
@@ -459,6 +463,7 @@ import { ArrowLeft, Copy, Square, X, createElement } from "lucide";
     content.innerHTML = `
       <div class="sts-turn-label">${label}</div>
       <div class="sts-stream-shell">
+        <div class="sts-stream-status" id="sts-stream-status" aria-live="polite"></div>
         <div class="sts-content-md sts-stream-text" id="sts-stream-text" aria-live="polite"></div>
       </div>
     `;
@@ -477,6 +482,7 @@ import { ArrowLeft, Copy, Square, X, createElement } from "lucide";
 
   function appendOutputChunk(chunk) {
     if (!state.outputEl || !chunk) return;
+    clearDownloadStatus();
     state.outputEl.textContent += chunk;
     const content = ensurePanel().querySelector("#sts-content");
     if (content) content.scrollTop = content.scrollHeight;
@@ -674,7 +680,7 @@ import { ArrowLeft, Copy, Square, X, createElement } from "lucide";
       }
     } finally {
       setRunning(false);
-      setDownloadStatus("");
+      clearDownloadStatus();
       state.activeController = null;
     }
   }
@@ -841,7 +847,7 @@ import { ArrowLeft, Copy, Square, X, createElement } from "lucide";
           emit,
         );
       } catch (error) {
-        setDownloadStatus("Summarizer fallback");
+        setDownloadStatus("Using the assistant model instead.");
       }
     }
 
@@ -975,9 +981,16 @@ import { ArrowLeft, Copy, Square, X, createElement } from "lucide";
           return;
         }
         hasShownProgress = true;
-        setDownloadStatus(`${label} ${progress}%`);
+        setDownloadStatus(getModelLoadingMessage(label, progress));
       });
     };
+  }
+
+  function getModelLoadingMessage(label, progress) {
+    const safeProgress = Math.max(0, Math.min(100, progress));
+    const modelName = label === "Summarizer" ? "summarizer model" : "assistant model";
+    if (safeProgress >= 100) return `Starting the local ${modelName}...`;
+    return `Loading the local ${modelName} into memory... ${safeProgress}%`;
   }
 
   async function assertAvailable(name, options = {}) {

@@ -1,0 +1,39 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="1000"
+  height="1000"
+  viewBox="0 0 8 8"
+  fill="none"
+>
+  <!--<rect width="8" height="8" fill="#999" fill-opacity="1" />-->
+  <path
+    d="
+    M 3 2
+    L 1 2
+    L 1 7
+    L 6 7
+    L 6 5
+    "
+    stroke="currentColor"
+    stroke-width="1"
+    stroke-linejoin="arcs"
+  />
+  <path
+    d="
+    M 4 1
+    L 7 1
+    L 7 4
+    "
+    stroke="currentColor"
+    stroke-width="1"
+    stroke-linejoin="arcs"
+  />
+  <path
+    d="
+    M 7 1
+    L 4 4
+    "
+    stroke="currentColor"
+    stroke-width="1"
+  />
+</svg>

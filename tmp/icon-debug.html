@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Icon Debug</title>
+    <link rel="stylesheet" href="../src/global.css" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--background);
+        color: var(--text);
+        font-family: var(--font);
+        font-size: 13px;
+      }
+
+      main {
+        display: grid;
+        gap: 18px;
+        width: min(1120px, 100%);
+        margin: 0 auto;
+        padding: 14px;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--border);
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.1;
+      }
+
+      h2 {
+        font-size: 13px;
+      }
+
+      .status {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .panel {
+        display: grid;
+        gap: 8px;
+      }
+
+      .icon-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+        border-top: 1px solid var(--border-muted);
+        border-left: 1px solid var(--border-muted);
+      }
+
+      .icon-cell {
+        display: grid;
+        justify-items: center;
+        gap: 8px;
+        min-height: 150px;
+        padding: 14px 10px;
+        border-right: 1px solid var(--border-muted);
+        border-bottom: 1px solid var(--border-muted);
+        background: var(--surface);
+      }
+
+      .icon-large {
+        width: 64px;
+        height: 64px;
+      }
+
+      .icon-small {
+        width: 16px;
+        height: 16px;
+      }
+
+      .icon-medium {
+        width: 16px;
+        height: 16px;
+      }
+
+      .icon-name {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .samples {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 14px;
+      }
+
+      .sample {
+        border-top: 2px solid var(--border);
+        background: var(--surface);
+      }
+
+      .sample-head {
+        padding: 8px;
+        border-bottom: 1px solid var(--border-muted);
+        font-weight: 800;
+      }
+
+      .sample-body {
+        display: grid;
+        gap: 8px;
+        padding: 8px;
+      }
+
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        min-height: 30px;
+        min-width: 0;
+        padding: 0 9px;
+        border: 2px solid var(--border);
+        border-radius: 0;
+        background: var(--surface);
+        box-shadow: inset 0 0 0 0 var(--border);
+        color: var(--text);
+        cursor: default;
+        font: inherit;
+        font-weight: 800;
+        outline: none;
+        transition:
+          box-shadow 100ms var(--ease),
+          color 100ms var(--ease),
+          opacity 100ms var(--ease);
+      }
+
+      .button.primary {
+        background: var(--primary);
+        color: var(--background);
+      }
+
+      .button.copy {
+        min-width: 90px;
+      }
+
+      .button.save {
+        min-width: 100px;
+      }
+
+      .button.icon-only {
+        width: 30px;
+        min-width: 30px;
+        padding: 0;
+      }
+
+      .popup {
+        border: 2px solid var(--border);
+        background: var(--surface);
+      }
+
+      .popup-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 42px;
+        padding: 6px 8px;
+        border-bottom: 2px solid var(--border);
+      }
+
+      .popup-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+        font-weight: 800;
+      }
+
+      .popup-content {
+        min-height: 74px;
+        padding: 8px;
+        line-height: 1.45;
+      }
+
+      .option-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 7px 8px;
+        border-bottom: 1px solid var(--border-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="toolbar">
+        <h1>Icon Debug</h1>
+        <div id="status" class="status">Loading icons...</div>
+      </div>
+
+      <section class="panel">
+        <h2>Large Grid</h2>
+        <div id="icon-grid" class="icon-grid" aria-live="polite"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Real World Samples</h2>
+        <div class="samples">
+          <div class="sample">
+            <div class="sample-head">Popup actions</div>
+            <div class="sample-body">
+              <div class="popup">
+                <div class="popup-header">
+                  <div id="popup-title" class="popup-title"></div>
+                  <div id="popup-actions" class="button-row"></div>
+                </div>
+                <div class="popup-content">
+                  Loading the local assistant model into memory... 42%
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sample">
+            <div class="sample-head">Options buttons</div>
+            <div class="sample-body">
+              <div id="option-buttons" class="button-row"></div>
+              <div class="option-row">
+                <strong>Prompt API</strong>
+                <div id="flag-buttons" class="button-row"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module">
+      const iconNames = [
+        "back",
+        "copy",
+        "database",
+        "external-link",
+        "refresh",
+        "save",
+        "start",
+        "stop",
+        "x",
+      ];
+      const status = document.getElementById("status");
+      const grid = document.getElementById("icon-grid");
+      const popupTitle = document.getElementById("popup-title");
+      const popupActions = document.getElementById("popup-actions");
+      const optionButtons = document.getElementById("option-buttons");
+      const flagButtons = document.getElementById("flag-buttons");
+      let lastSignature = "";
+
+      function button(icon, label, className = "") {
+        const el = document.createElement("button");
+        el.className = `button ${className}`.trim();
+        el.type = "button";
+        el.append(icon);
+        if (label) el.append(document.createTextNode(label));
+        return el;
+      }
+
+      function parseIcon(source) {
+        const doc = new DOMParser().parseFromString(source, "image/svg+xml");
+        const icon = document.importNode(doc.documentElement, true);
+        icon.setAttribute("aria-hidden", "true");
+        icon.setAttribute("focusable", "false");
+        return icon;
+      }
+
+      function renderIcon(iconSources, name, className) {
+        const icon = parseIcon(iconSources[name]);
+        icon.classList.add(className);
+        return icon;
+      }
+
+      function replaceChildren(target, children) {
+        target.replaceChildren(...children);
+      }
+
+      async function render() {
+        try {
+          const iconSources = Object.fromEntries(
+            await Promise.all(
+              iconNames.map(async (name) => {
+                const source = await fetch(`../src/icons/${name}.svg?t=${Date.now()}`).then(
+                  (response) => response.text(),
+                );
+                return [name, source];
+              }),
+            ),
+          );
+          const signature = JSON.stringify(iconSources);
+          if (signature === lastSignature) return;
+          lastSignature = signature;
+
+          replaceChildren(
+            grid,
+            iconNames.map((name) => {
+              const cell = document.createElement("div");
+              cell.className = "icon-cell";
+              cell.append(renderIcon(iconSources, name, "icon-large"));
+              const label = document.createElement("div");
+              label.className = "icon-name";
+              label.textContent = name;
+              cell.append(label);
+              cell.append(renderIcon(iconSources, name, "icon-small"));
+              return cell;
+            }),
+          );
+
+          replaceChildren(popupTitle, [
+            renderIcon(iconSources, "back", "icon-medium"),
+            document.createTextNode("Answer"),
+          ]);
+          replaceChildren(popupActions, [
+            button(renderIcon(iconSources, "copy", "icon-medium"), "Copy", "copy"),
+            button(renderIcon(iconSources, "stop", "icon-medium"), "Stop"),
+            button(renderIcon(iconSources, "x", "icon-medium"), "", "icon-only"),
+          ]);
+          replaceChildren(optionButtons, [
+            button(renderIcon(iconSources, "refresh", "icon-small"), "Refresh"),
+            button(renderIcon(iconSources, "start", "icon-small"), "Start model", "primary"),
+            button(renderIcon(iconSources, "database", "icon-small"), "Manage models"),
+            button(renderIcon(iconSources, "save", "icon-small"), "Saved", "save"),
+          ]);
+          replaceChildren(flagButtons, [
+            button(renderIcon(iconSources, "external-link", "icon-small"), "Open"),
+            button(renderIcon(iconSources, "copy", "icon-small"), "Copied", "copy"),
+          ]);
+          status.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+        } catch (error) {
+          status.textContent = error instanceof Error ? error.message : "Icon render failed";
+        }
+      }
+
+      render();
+      setInterval(render, 700);
+    </script>
+  </body>
+</html>

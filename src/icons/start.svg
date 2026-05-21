@@ -1,0 +1,20 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="1000"
+  height="1000"
+  viewBox="0 0 8 8"
+  fill="currentColor"
+>
+  <!--<rect width="8" height="8" fill="#999" fill-opacity="1" />-->
+  <path
+    d="
+    M 2 2
+    L 5 4
+    L 2 6
+    z
+    "
+    stroke="currentColor"
+    stroke-width="1"
+    stroke-miterlimit="10"
+  />
+</svg>

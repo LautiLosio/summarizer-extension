@@ -10,7 +10,7 @@
   --primary: #100f0f;
   --primary-hover: #343331;
   --danger: #af3029;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease: cubic-bezier(0.2, 0, 0.4, 1);
   --font: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   scrollbar-color: var(--muted) var(--surface);
   scrollbar-width: thin;
@@ -89,6 +89,7 @@
   border-right: 1px solid var(--border-muted);
   border-radius: 0;
   background: var(--surface);
+  box-shadow: inset 0 0 0 0 var(--border-muted);
   color: var(--text);
   cursor: pointer;
   font-weight: 800 !important;
@@ -96,8 +97,9 @@
   opacity: 0;
   pointer-events: auto;
   transition:
-    opacity 120ms var(--ease),
-    background 120ms var(--ease);
+    box-shadow 100ms var(--ease),
+    opacity 100ms var(--ease);
+  will-change: box-shadow, opacity;
 }
 
 .sts-tooltip-btn:last-child {
@@ -105,7 +107,12 @@
 }
 
 .sts-tooltip-btn:hover {
-  background: var(--surface-soft);
+  box-shadow: inset 0 0 0 2px var(--border);
+}
+
+.sts-tooltip-btn:active {
+  color: var(--background);
+  box-shadow: inset 0 0 0 20px var(--border);
 }
 
 .sts-tooltip.sts-visible .sts-tooltip-btn {
@@ -160,21 +167,6 @@
   background: var(--surface);
 }
 
-.sts-status-line {
-  display: none;
-  min-height: 25px;
-  padding: 5px 8px;
-  border-bottom: 1px solid var(--border-muted);
-  color: var(--muted);
-  font-size: 11px !important;
-  font-weight: 800 !important;
-}
-
-.sts-status-line:not(:empty) {
-  display: block;
-  animation: sts-enter 120ms var(--ease);
-}
-
 .sts-popup-header .title {
   display: flex;
   align-items: center;
@@ -221,24 +213,30 @@
   justify-content: center;
   gap: 5px;
   min-height: 30px;
+  min-width:;
   padding: 0 9px;
   border: 2px solid var(--border);
   border-radius: 0;
   background: var(--surface);
+  box-shadow: inset 0 0 0 0 var(--border);
   color: var(--text);
   cursor: pointer;
   font-weight: 800 !important;
   outline: none;
   transition:
-    background 100ms var(--ease),
+    box-shadow 100ms var(--ease),
     color 100ms var(--ease),
-    opacity 100ms var(--ease),
-    transform 90ms var(--ease);
+    opacity 100ms var(--ease);
+  will-change: box-shadow, color, opacity;
 }
 
-.sts-btn:hover,
+.sts-copy {
+  min-width: 90px;
+}
+
+.sts-btn:not([disabled]):hover,
 .sts-mode:hover {
-  background: var(--surface-soft);
+  box-shadow: inset 0 0 0 2px var(--border);
 }
 
 .sts-btn:focus-visible,
@@ -248,18 +246,16 @@
   outline: 0;
 }
 
-.sts-btn:active,
-.sts-mode:active,
-.sts-back:active,
-.sts-tooltip-btn:active {
-  transform: translateY(1px);
+.sts-btn:not([disabled]):active,
+.sts-mode:active {
+  color: var(--background);
+  box-shadow: inset 0 0 0 20px var(--border);
 }
 
 .sts-icon {
   flex: 0 0 auto;
-  width: 15px;
-  height: 15px;
-  stroke-width: 2.4;
+  width: 16px;
+  height: 16px;
 }
 
 .sts-btn[disabled] {
@@ -274,10 +270,6 @@
 .sts-btn--tinted {
   background: var(--primary);
   color: var(--background);
-}
-
-.sts-btn--tinted:hover {
-  background: var(--primary-hover);
 }
 
 .sts-btn--icon {
@@ -327,7 +319,6 @@
 
 .sts-compose {
   padding: 8px;
-  border-top: 2px solid var(--border);
   background: var(--surface);
   animation: sts-enter 120ms var(--ease);
 }
@@ -374,7 +365,7 @@
 }
 
 .sts-ask-grid textarea {
-  min-height: 40px;
+  min-height: 35px;
 }
 
 .sts-mode-form [data-run="ask"] {
@@ -430,7 +421,19 @@
 }
 
 .sts-stream-shell {
-  min-height: calc(4 * 1.45em);
+  min-height: 1.45em;
+}
+
+.sts-stream-status {
+  display: none;
+  color: var(--muted);
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.sts-stream-status:not(:empty) {
+  display: block;
+  animation: sts-enter 120ms var(--ease);
 }
 
 .sts-error {

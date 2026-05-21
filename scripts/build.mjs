@@ -29,6 +29,9 @@ const bundleOptions = {
   format: "iife",
   target: "chrome120",
   outdir: outDir,
+  loader: {
+    ".svg": "text",
+  },
   sourcemap: false,
   legalComments: "none",
 };

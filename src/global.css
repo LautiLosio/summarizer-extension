@@ -10,9 +10,10 @@
   --primary: #100f0f;
   --primary-hover: #343331;
   --danger: #af3029;
-  --focus: rgba(16, 15, 15, 0.16);
+  --focus: var(--border);
   --success: #66800b;
   --warning: #ad8301;
   --accent: #24837b;
+  --ease: cubic-bezier(0.2, 0, 0.4, 1);
   --font: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }

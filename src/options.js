@@ -1,12 +1,4 @@
-import {
-  Clipboard,
-  Database,
-  ExternalLink,
-  Play,
-  RefreshCw,
-  Save,
-  createElement,
-} from "lucide";
+import { createFilledIcon } from "./lib/filled-icons.js";
 
 const STORAGE_KEYS = {
   CONFIG: "sts_config",
@@ -47,12 +39,12 @@ const FLAG_LINKS = [
   ["Summaries", "chrome://flags/#summarization-api-for-gemini-nano"],
 ];
 const ICONS = {
-  copy: Clipboard,
-  manage: Database,
-  open: ExternalLink,
-  refresh: RefreshCw,
-  save: Save,
-  start: Play,
+  copy: "copy",
+  manage: "database",
+  open: "external-link",
+  refresh: "refresh",
+  save: "save",
+  start: "start",
 };
 
 const API_DEFINITIONS = [
@@ -112,8 +104,9 @@ const elements = {
   selectionSummaryFormatInput: document.getElementById("selectionSummaryFormat"),
   selectionSummaryInstructionsInput: document.getElementById("selectionSummaryInstructions"),
   saveSettingsBtn: document.getElementById("save-settings-btn"),
-  saveStatus: document.getElementById("save-status"),
 };
+
+let saveFeedbackTimer = null;
 
 function setIconButton(button, iconName, label) {
   const iconNode = ICONS[iconName];
@@ -124,7 +117,8 @@ function setIconButton(button, iconName, label) {
   ) {
     return;
   }
-  const icon = createElement(iconNode);
+  const icon = createFilledIcon(iconNode);
+  if (!icon) return;
   icon.setAttribute("aria-hidden", "true");
   icon.classList.add("option-icon");
   button.textContent = "";
@@ -541,8 +535,11 @@ async function saveSettings() {
   writeSettingsForm(config);
   initialConfigJson = JSON.stringify(config);
   updateSaveAccent();
-  elements.saveStatus.textContent = "Saved";
-  setTimeout(() => (elements.saveStatus.textContent = ""), 1200);
+  setIconButton(elements.saveSettingsBtn, "save", "Saved");
+  clearTimeout(saveFeedbackTimer);
+  saveFeedbackTimer = setTimeout(() => {
+    setIconButton(elements.saveSettingsBtn, "save", "Save");
+  }, 1200);
 }
 
 function bindSettingsInputs() {
