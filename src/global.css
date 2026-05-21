@@ -1,157 +1,18 @@
-/*
-  Selection Summarizer – Shared semantic tokens
-  Tactile glass + soft-neumorphic finish driven by project palette only
-*/
-
-@font-face {
-  font-family: "Atkinson Hyperlegible";
-  src: url("fonts/AtkinsonHyperlegible-Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Atkinson Hyperlegible";
-  src: url("fonts/AtkinsonHyperlegible-Bold.ttf") format("truetype");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Atkinson Hyperlegible";
-  src: url("fonts/AtkinsonHyperlegible-Italic.ttf") format("truetype");
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Atkinson Hyperlegible";
-  src: url("fonts/AtkinsonHyperlegible-BoldItalic.ttf") format("truetype");
-  font-weight: 700;
-  font-style: italic;
-  font-display: swap;
-}
-
 :root {
-  /* Required semantic token contract */
-  --bg: #efe7d8;
-  --fg: #3a352f;
-  --surface-1: rgba(249, 244, 235, 0.72);
-  --surface-2: rgba(235, 226, 214, 0.84);
-  --surface-3: rgba(224, 214, 201, 0.74);
-
-  --brand-accent: #739b88;
-  --brand-accent-soft: rgba(115, 155, 136, 0.18);
-
-  --state-success: #6e9884;
-  --state-danger: #a16e64;
-  --state-warning: #ae8451;
-  --state-muted: #7a7266;
-
-  --glow-primary: rgba(115, 155, 136, 0.24);
-  --glow-success: rgba(110, 152, 132, 0.22);
-  --glow-danger: rgba(161, 110, 100, 0.2);
-  --glow-warning: rgba(174, 132, 81, 0.2);
-
-  --radius-sm: 7px;
-  --radius-md: 10px;
-  --radius-lg: 12px;
-  --radius-pill: 999px;
-
-  --dur-fast: 110ms;
-  --dur-mid: 160ms;
-  --ease-soft: cubic-bezier(0.2, 0, 0.4, 1);
-  --ease-spring: cubic-bezier(0.2, 0.8, 0.24, 1);
-
-  /* Derived semantic helpers */
-  --ink-soft: #4f4a42;
-  --ink-muted: #6c655b;
-  --ink-on-accent: #f4efe5;
-  --border-soft: rgba(58, 53, 47, 0.1);
-  --border-strong: rgba(58, 53, 47, 0.16);
-  --highlight-strong: rgba(255, 255, 255, 0.58);
-  --highlight-soft: rgba(255, 255, 255, 0.28);
-  --shadow-soft: rgba(88, 73, 57, 0.08);
-  --shadow-press: rgba(88, 73, 57, 0.12);
-  --overlay-soft: rgba(249, 244, 235, 0.18);
-  --glass-blur: 12px;
-
-  --state-success-soft: rgba(110, 152, 132, 0.18);
-  --state-danger-soft: rgba(161, 110, 100, 0.16);
-  --state-warning-soft: rgba(174, 132, 81, 0.16);
-  --state-muted-soft: rgba(122, 114, 102, 0.14);
-
-  /* Typography */
-  --sts-font: "Atkinson Hyperlegible", sans-serif;
-  --sts-font-display: "Atkinson Hyperlegible", sans-serif;
-  --sts-font-size-base: 14px;
-  --sts-font-size-sm: 13px;
-  --sts-font-size-xs: 12px;
-
-  /* Compatibility aliases used by popup/content styles */
-  --brand-primary: var(--brand-accent);
-  --brand-secondary: color-mix(in srgb, var(--brand-accent) 30%, var(--fg));
-
-  --sts-bg: var(--bg);
-  --sts-bg-alt: var(--surface-2);
-  --sts-text: var(--fg);
-  --sts-text-muted: var(--ink-muted);
-  --sts-text-muted-strong: var(--ink-soft);
-  --sts-text-error: var(--state-danger);
-  --sts-text-on-accent: var(--ink-on-accent);
-
-  --sts-accent: var(--brand-accent);
-  --sts-accent-hover: color-mix(in srgb, var(--brand-accent) 82%, white);
-  --sts-accent-gradient: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--brand-accent) 84%, white) 0%,
-    color-mix(in srgb, var(--brand-accent) 78%, var(--fg)) 100%
-  );
-
-  --sts-surface-shell: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.26) 0%,
-    rgba(255, 255, 255, 0.08) 100%
-  );
-  --sts-surface-muted: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.22) 0%,
-    rgba(255, 255, 255, 0.06) 100%
-  );
-  --sts-surface-shadow: 0 1px 1px var(--shadow-soft);
-  --sts-contact-shadow: 0 1px 1px rgba(58, 53, 47, 0.08);
-  --sts-inset-highlight: inset 0 1px 0 var(--highlight-strong);
-  --sts-inset-shade: inset 0 -1px 0 rgba(88, 73, 57, 0.08);
-  --sts-inset-press: inset 0 1px 1px rgba(88, 73, 57, 0.12);
-
-  --sts-btn-shadow-rest:
-    var(--sts-inset-highlight),
-    var(--sts-inset-shade),
-    0 1px 1px rgba(58, 53, 47, 0.08);
-  --sts-btn-shadow-hover:
-    inset 0 1px 0 rgba(255, 255, 255, 0.64),
-    inset 0 -1px 0 rgba(88, 73, 57, 0.1),
-    0 1px 1px rgba(58, 53, 47, 0.1);
-  --sts-btn-shadow-press:
-    var(--sts-inset-press),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.2),
-    0 1px 1px rgba(58, 53, 47, 0.08);
-
-  --sts-focus-ring: rgba(115, 155, 136, 0.24);
-  --sts-separator: var(--border-soft);
-  --sts-line-h: 11px;
-  --sts-gap: 10px;
-
-  --sts-bg-skeleton: linear-gradient(
-    90deg,
-    rgba(224, 214, 201, 0.58) 0%,
-    rgba(255, 255, 255, 0.46) 45%,
-    rgba(224, 214, 201, 0.58) 100%
-  );
-
-  --sts-tooltip-duration: 320ms;
-  --sts-tooltip-easing: var(--ease-spring);
+  color-scheme: light;
+  --background: #fffcf0;
+  --surface: #fffcf0;
+  --surface-soft: #f2f0e5;
+  --border: #100f0f;
+  --border-muted: #cecdc3;
+  --text: #100f0f;
+  --muted: #6f6e69;
+  --primary: #100f0f;
+  --primary-hover: #343331;
+  --danger: #af3029;
+  --focus: rgba(16, 15, 15, 0.16);
+  --success: #66800b;
+  --warning: #ad8301;
+  --accent: #24837b;
+  --font: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }

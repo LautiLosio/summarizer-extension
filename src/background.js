@@ -1,37 +1,80 @@
-const MENU_ID = "sts-summarize-selection";
+const MENU_IDS = {
+  ASK_SELECTION: "sts-ask-selection",
+  SUMMARIZE_SELECTION: "sts-summarize-selection",
+  SUMMARIZE_PAGE: "sts-summarize-page",
+  OPEN_ASSISTANT: "sts-open-assistant",
+};
 
-function createContextMenu() {
+function createContextMenus() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
-      id: MENU_ID,
+      id: MENU_IDS.OPEN_ASSISTANT,
+      title: "Open Local AI",
+      contexts: ["page"],
+    });
+    chrome.contextMenus.create({
+      id: MENU_IDS.SUMMARIZE_PAGE,
+      title: "Summarize this page",
+      contexts: ["page"],
+    });
+    chrome.contextMenus.create({
+      id: MENU_IDS.ASK_SELECTION,
+      title: "Ask about selection",
+      contexts: ["selection"],
+    });
+    chrome.contextMenus.create({
+      id: MENU_IDS.SUMMARIZE_SELECTION,
       title: "Summarize selection",
       contexts: ["selection"],
     });
   });
 }
 
-chrome.runtime.onInstalled.addListener(() => {
-  createContextMenu();
-});
+chrome.runtime.onInstalled.addListener(createContextMenus);
+chrome.runtime.onStartup.addListener(createContextMenus);
 
-chrome.runtime.onStartup.addListener(() => {
-  createContextMenu();
+chrome.action.onClicked.addListener((tab) => {
+  if (!tab?.id) return;
+  sendMessageToTab(tab.id, { type: "sts-open-assistant" });
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId !== MENU_ID) return;
+  if (!tab?.id) return;
 
   const selectionText = String(info.selectionText || "").trim();
-  if (!selectionText || !tab?.id) return;
-
-  chrome.tabs.sendMessage(
-    tab.id,
-    {
-      type: "sts-manual-summarize",
+  const messageByMenu = {
+    [MENU_IDS.OPEN_ASSISTANT]: { type: "sts-open-assistant" },
+    [MENU_IDS.SUMMARIZE_PAGE]: { type: "sts-summarize-page" },
+    [MENU_IDS.ASK_SELECTION]: {
+      type: "sts-ask-selection",
       selectionText,
     },
-    () => {
-      void chrome.runtime.lastError;
+    [MENU_IDS.SUMMARIZE_SELECTION]: {
+      type: "sts-summarize-selection",
+      selectionText,
     },
-  );
+  };
+
+  const message = messageByMenu[info.menuItemId];
+  if (!message) return;
+  sendMessageToTab(tab.id, message);
 });
+
+function sendMessageToTab(tabId, message) {
+  chrome.tabs.sendMessage(tabId, message, async () => {
+    if (!chrome.runtime.lastError) return;
+    try {
+      await chrome.scripting.insertCSS({
+        target: { tabId },
+        files: ["content.css"],
+      });
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ["content.js"],
+      });
+      chrome.tabs.sendMessage(tabId, message, () => {
+        void chrome.runtime.lastError;
+      });
+    } catch (_) {}
+  });
+}
