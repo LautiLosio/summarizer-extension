@@ -1,4 +1,5 @@
 import { Readability } from "@mozilla/readability";
+import { ArrowLeft, Copy, Square, X, createElement } from "lucide";
 
 (() => {
   const CONFIG_KEY = "sts_config";
@@ -31,6 +32,12 @@ import { Readability } from "@mozilla/readability";
     format: ["markdown", "plain-text"],
     summaryType: ["key-points", "tldr", "teaser", "headline"],
     summaryLength: ["short", "medium", "long"],
+  };
+  const ICONS = {
+    back: ArrowLeft,
+    copy: Copy,
+    close: X,
+    stop: Square,
   };
   const MAX_CONTEXT_CHARS = 18000;
   const MAX_SELECTION_CHARS = 12000;
@@ -278,7 +285,7 @@ import { Readability } from "@mozilla/readability";
           <div class="actions">
             <button class="sts-btn sts-btn--ghost sts-copy" type="button">Copy</button>
             <button class="sts-btn sts-btn--ghost sts-stop" type="button">Stop</button>
-            <button class="sts-btn sts-btn--ghost sts-btn--icon sts-close" type="button" aria-label="Close assistant" title="Close assistant"><span aria-hidden="true">x</span></button>
+            <button class="sts-btn sts-btn--ghost sts-btn--icon sts-close" type="button" aria-label="Close assistant" title="Close assistant"></button>
           </div>
         </div>
         <div id="sts-download" class="sts-status-line" aria-live="polite"></div>
@@ -302,8 +309,34 @@ import { Readability } from "@mozilla/readability";
     el.querySelector(".sts-stop")?.addEventListener("click", stopCurrentRun);
     document.body.appendChild(el);
     state.panelEl = el;
+    decoratePanelIcons();
     renderMode("home");
     return state.panelEl;
+  }
+
+  function decoratePanelIcons() {
+    setIconButton(state.panelEl?.querySelector(".sts-copy"), "copy", "Copy");
+    setIconButton(state.panelEl?.querySelector(".sts-stop"), "stop", "Stop");
+    setIconButton(state.panelEl?.querySelector(".sts-close"), "close", "");
+  }
+
+  function setIconButton(button, iconName, label) {
+    const iconNode = ICONS[iconName];
+    if (!button || !iconNode) return;
+    if (
+      button.dataset.iconReady === iconName &&
+      button.dataset.iconLabel === label
+    ) {
+      return;
+    }
+    const icon = createElement(iconNode);
+    icon.setAttribute("aria-hidden", "true");
+    icon.classList.add("sts-icon");
+    button.textContent = "";
+    button.append(icon);
+    if (label) button.append(document.createTextNode(label));
+    button.dataset.iconReady = iconName;
+    button.dataset.iconLabel = label;
   }
 
   function showPanel() {
@@ -347,9 +380,15 @@ import { Readability } from "@mozilla/readability";
     state.lastAnswer = "";
     panel.classList.toggle("sts-is-home", mode === "home");
     const title = panel.querySelector(".sts-back");
-    if (title)
-      title.textContent =
-        mode === "home" ? "Local AI" : `< ${getModeTitle(mode)}`;
+    if (title) {
+      if (mode === "home") {
+        title.textContent = "Local AI";
+        delete title.dataset.iconReady;
+        delete title.dataset.iconLabel;
+      } else {
+        setIconButton(title, "back", getModeTitle(mode));
+      }
+    }
     panel.querySelector(".sts-copy")?.setAttribute("disabled", "true");
     panel.querySelector(".sts-stop")?.setAttribute("disabled", "true");
 
@@ -478,12 +517,12 @@ import { Readability } from "@mozilla/readability";
     if (!copyBtn || !text) return;
     try {
       await navigator.clipboard.writeText(text);
-      copyBtn.textContent = "Copied";
+      setIconButton(copyBtn, "copy", "Copied");
     } catch (_) {
-      copyBtn.textContent = "Retry";
+      setIconButton(copyBtn, "copy", "Retry");
     } finally {
       setTimeout(() => {
-        copyBtn.textContent = "Copy";
+        setIconButton(copyBtn, "copy", "Copy");
       }, 1300);
     }
   }
@@ -538,6 +577,7 @@ import { Readability } from "@mozilla/readability";
   async function runQuickAction(action) {
     state.selectionText = getSelectionText() || state.selectionText;
     showPanel();
+    prepareQuickActionMode("summarize");
 
     if (action === "summarize-page") {
       await runTask("Page summary", (emit) =>
@@ -558,6 +598,20 @@ import { Readability } from "@mozilla/readability";
       );
       return;
     }
+  }
+
+  function prepareQuickActionMode(mode) {
+    const panel = ensurePanel();
+    const compose = panel.querySelector("#sts-compose");
+    state.currentMode = mode;
+    state.outputEl = null;
+    state.lastAnswer = "";
+    panel.classList.toggle("sts-is-home", false);
+    const title = panel.querySelector(".sts-back");
+    if (title) setIconButton(title, "back", getModeTitle(mode));
+    panel.querySelector(".sts-copy")?.setAttribute("disabled", "true");
+    panel.querySelector(".sts-stop")?.setAttribute("disabled", "true");
+    if (compose) compose.innerHTML = "";
   }
 
   async function runAssistantQuestion(question) {
@@ -759,6 +813,12 @@ import { Readability } from "@mozilla/readability";
     ]
       .filter(Boolean)
       .join("\n");
+    if (summaryConfig.format === "plain-text") {
+      return promptLanguageModel(
+        buildSummaryFallbackPrompt(input, source, summaryConfig),
+        emit,
+      );
+    }
     if ("Summarizer" in self) {
       try {
         const summarizer = await createBuiltInApi("Summarizer", {
@@ -805,15 +865,10 @@ import { Readability } from "@mozilla/readability";
   }
 
   function buildSummaryFallbackPrompt(input, source, config) {
-    const typeLabel =
-      {
-        "key-points": "key points",
-        tldr: "a TL;DR",
-        teaser: "a teaser",
-        headline: "a headline",
-      }[config.type] || config.type;
+    const typeInstruction = getTypeInstruction(config);
     return [
-      `Summarize this ${source} as ${typeLabel}.`,
+      `Summarize this ${source}.`,
+      typeInstruction,
       `Length: ${config.length}.`,
       `Output format: ${config.format === "markdown" ? "Markdown" : "plain text"}.`,
       getFormatInstruction(config.format),
@@ -821,6 +876,20 @@ import { Readability } from "@mozilla/readability";
       "",
       input,
     ].join("\n");
+  }
+
+  function getTypeInstruction(config) {
+    if (config.format === "plain-text" && config.type === "key-points") {
+      return "Cover the key points in compact prose. Do not format the response as a list.";
+    }
+    return (
+      {
+        "key-points": "Use key points.",
+        tldr: "Write a TL;DR.",
+        teaser: "Write a teaser.",
+        headline: "Write a headline.",
+      }[config.type] || `Use summary type: ${config.type}.`
+    );
   }
 
   async function promptLanguageModel(prompt, emit) {

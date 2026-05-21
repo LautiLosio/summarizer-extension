@@ -12,6 +12,7 @@
     "esbuild": "^0.25.3"
   },
   "dependencies": {
-    "@mozilla/readability": "^0.6.0"
+    "@mozilla/readability": "^0.6.0",
+    "lucide": "^1.16.0"
   }
 }

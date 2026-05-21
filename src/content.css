@@ -185,6 +185,9 @@
 }
 
 .sts-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   min-width: 0;
   padding: 0;
   border: 0;
@@ -213,6 +216,10 @@
 
 .sts-btn,
 .sts-mode {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   min-height: 30px;
   padding: 0 9px;
   border: 2px solid var(--border);
@@ -225,7 +232,8 @@
   transition:
     background 100ms var(--ease),
     color 100ms var(--ease),
-    opacity 100ms var(--ease);
+    opacity 100ms var(--ease),
+    transform 90ms var(--ease);
 }
 
 .sts-btn:hover,
@@ -238,6 +246,20 @@
 .sts-select:focus-visible,
 .sts-compose textarea:focus-visible {
   outline: 0;
+}
+
+.sts-btn:active,
+.sts-mode:active,
+.sts-back:active,
+.sts-tooltip-btn:active {
+  transform: translateY(1px);
+}
+
+.sts-icon {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.4;
 }
 
 .sts-btn[disabled] {
@@ -262,11 +284,6 @@
   width: 30px;
   min-width: 30px;
   padding: 0;
-}
-
-.sts-close > span {
-  display: block;
-  transform: translateY(-1px);
 }
 
 .sts-content {

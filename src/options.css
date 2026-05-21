@@ -45,9 +45,9 @@ h1 {
 
 .container {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
-  gap: 10px;
+  column-gap: 22px;
+  row-gap: 0;
   width: min(1120px, 100%);
   margin: 0 auto;
   padding: 10px;
@@ -58,25 +58,16 @@ h1 {
   grid-row: 1 / span 3;
 }
 
-.status-card:nth-of-type(1) {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.status-card:nth-of-type(2) {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-.status-card:nth-of-type(3) {
-  grid-column: 1;
-  grid-row: 3;
-}
-
 .status-card {
-  border: 2px solid var(--border);
+  border: 0;
+  border-top: 2px solid var(--border);
   background: var(--surface);
   animation: option-enter 140ms var(--ease);
+}
+
+.status-card:nth-of-type(1),
+.status-card:nth-of-type(4) {
+  border-top: 0;
 }
 
 .section-head,
@@ -141,6 +132,10 @@ h1 {
 button,
 .tactile-btn,
 .quiet-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   height: 28px;
   padding: 0 9px;
   border: 2px solid var(--border);
@@ -153,7 +148,8 @@ button,
   transition:
     background 100ms var(--ease),
     color 100ms var(--ease),
-    opacity 100ms var(--ease);
+    opacity 100ms var(--ease),
+    transform 90ms var(--ease);
 }
 
 button:hover,
@@ -168,6 +164,19 @@ button:disabled,
   opacity: 0.66;
 }
 
+button:active:not(:disabled),
+.tactile-btn:active:not(:disabled),
+.quiet-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.option-icon {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.4;
+}
+
 .tactile-btn--primary {
   background: var(--primary);
   color: var(--background);
@@ -180,7 +189,7 @@ button:disabled,
 .checklist,
 .model-list {
   display: grid;
-  border-top: 2px solid var(--border);
+  border-top: 1px solid var(--border-muted);
 }
 
 .check-row,
@@ -191,7 +200,9 @@ button:disabled,
   padding: 5px 8px;
   border-bottom: 1px solid var(--border-muted);
   background: var(--surface);
-  transition: background 100ms var(--ease);
+  transition:
+    background 100ms var(--ease),
+    opacity 120ms var(--ease);
 }
 
 .check-row {
@@ -278,7 +289,7 @@ button:disabled,
 .settings-container {
   display: grid;
   gap: 10px;
-  border-top: 2px solid var(--border);
+  border-top: 1px solid var(--border-muted);
 }
 
 .row {
@@ -290,7 +301,7 @@ button:disabled,
 
 .center {
   display: flex;
-  justify-content: flex-start;
+  justify-content: flex-end;
 }
 
 label {
@@ -414,20 +425,12 @@ button:focus-visible {
     grid-row: auto;
   }
 
-  .status-card:nth-of-type(1),
-  .status-card:nth-of-type(2),
-  .status-card:nth-of-type(3) {
-    grid-column: auto;
-    grid-row: auto;
-  }
-
   .settings-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 700px) {
-
   .check-row,
   .flag-row,
   .model-row {

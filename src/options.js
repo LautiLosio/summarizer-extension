@@ -1,3 +1,13 @@
+import {
+  Clipboard,
+  Database,
+  ExternalLink,
+  Play,
+  RefreshCw,
+  Save,
+  createElement,
+} from "lucide";
+
 const STORAGE_KEYS = {
   CONFIG: "sts_config",
 };
@@ -36,6 +46,14 @@ const FLAG_LINKS = [
   ["Prompt API", "chrome://flags/#prompt-api-for-gemini-nano"],
   ["Summaries", "chrome://flags/#summarization-api-for-gemini-nano"],
 ];
+const ICONS = {
+  copy: Clipboard,
+  manage: Database,
+  open: ExternalLink,
+  refresh: RefreshCw,
+  save: Save,
+  start: Play,
+};
 
 const API_DEFINITIONS = [
   {
@@ -96,6 +114,32 @@ const elements = {
   saveSettingsBtn: document.getElementById("save-settings-btn"),
   saveStatus: document.getElementById("save-status"),
 };
+
+function setIconButton(button, iconName, label) {
+  const iconNode = ICONS[iconName];
+  if (!button || !iconNode) return;
+  if (
+    button.dataset.iconReady === iconName &&
+    button.dataset.iconLabel === label
+  ) {
+    return;
+  }
+  const icon = createElement(iconNode);
+  icon.setAttribute("aria-hidden", "true");
+  icon.classList.add("option-icon");
+  button.textContent = "";
+  button.append(icon);
+  if (label) button.append(document.createTextNode(label));
+  button.dataset.iconReady = iconName;
+  button.dataset.iconLabel = label;
+}
+
+function decorateStaticButtons() {
+  setIconButton(elements.refreshBtn, "refresh", "Refresh");
+  setIconButton(elements.downloadCoreBtn, "start", "Start model");
+  setIconButton(elements.openModelsBtn, "manage", "Manage models");
+  setIconButton(elements.saveSettingsBtn, "save", "Save");
+}
 
 let initialConfigJson = "";
 let currentRows = [];
@@ -316,7 +360,11 @@ function renderState(rows) {
   }
 
   elements.downloadCoreBtn.disabled = !downloadable.length && !downloading.length;
-  elements.downloadCoreBtn.textContent = downloading.length ? "Downloading..." : "Start model";
+  setIconButton(
+    elements.downloadCoreBtn,
+    "start",
+    downloading.length ? "Downloading..." : "Start model",
+  );
 
   renderChecklist(rows);
   renderModels(rows, { blocked });
@@ -350,9 +398,11 @@ function renderChecklist(rows) {
   const flagRows = FLAG_LINKS.map(([label, url]) => flagItem(label, url, exposed.length ? "ready" : "blocked"));
   elements.checklist.innerHTML = [...inferredRows, ...flagRows].join("");
   elements.checklist.querySelectorAll("[data-open-flag]").forEach((button) => {
+    setIconButton(button, "open", "Open");
     button.addEventListener("click", () => openChromePage(button.dataset.openFlag));
   });
   elements.checklist.querySelectorAll("[data-copy-flag]").forEach((button) => {
+    setIconButton(button, "copy", "Copy");
     button.addEventListener("click", () => copyFlag(button));
   });
 }
@@ -391,6 +441,7 @@ function renderModels(rows) {
     .join("");
 
   elements.modelList.querySelectorAll("[data-start]").forEach((button) => {
+    setIconButton(button, "start", "Start");
     button.addEventListener("click", () => startModel(button.dataset.start));
   });
 }
@@ -470,9 +521,9 @@ function openChromePage(url) {
 
 async function copyFlag(button) {
   await navigator.clipboard.writeText(button.dataset.copyFlag || "");
-  button.textContent = "Copied";
+  setIconButton(button, "copy", "Copied");
   setTimeout(() => {
-    button.textContent = "Copy";
+    setIconButton(button, "copy", "Copy");
   }, 1200);
 }
 
@@ -514,6 +565,7 @@ function bindSettingsInputs() {
 }
 
 function init() {
+  decorateStaticButtons();
   elements.refreshBtn?.addEventListener("click", refreshApis);
   elements.downloadCoreBtn?.addEventListener("click", startCoreModel);
   elements.openModelsBtn?.addEventListener("click", () => openChromePage("chrome://on-device-internals"));
