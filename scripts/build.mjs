@@ -10,11 +10,10 @@ const watchMode = process.argv.includes("--watch");
 
 const staticEntries = [
   "manifest.json",
-  "popup.html",
-  "popup.css",
+  "options.html",
+  "options.css",
   "content.css",
   "global.css",
-  "fonts",
   "icon16.png",
   "icon48.png",
   "icon128.png",
@@ -24,7 +23,7 @@ const bundleOptions = {
   entryPoints: [
     path.join(srcDir, "background.js"),
     path.join(srcDir, "content.js"),
-    path.join(srcDir, "popup.js"),
+    path.join(srcDir, "options.js"),
   ],
   bundle: true,
   format: "iife",

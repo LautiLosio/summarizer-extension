@@ -1,5 +1,5 @@
 {
-  "name": "summarizer-extension",
+  "name": "local-ai-extension",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -8,10 +8,10 @@
     "dev": "node scripts/build.mjs --watch",
     "clean": "rm -rf dist"
   },
-  "dependencies": {
-    "@chenglou/pretext": "^0.0.5"
-  },
   "devDependencies": {
     "esbuild": "^0.25.3"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0"
   }
 }

@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Local AI</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Local AI</h1>
+      <button
+        id="refresh-btn"
+        class="tactile-btn tactile-btn--ghost"
+        type="button"
+      >
+        Refresh
+      </button>
+    </header>
+
+    <main id="container" class="container">
+      <section class="status-card status-card--success">
+        <div class="section-head">
+          <div>
+            <div id="overall-title" class="title">Checking Chrome AI</div>
+          </div>
+          <span id="overall-pill" class="state-badge">...</span>
+        </div>
+        <div id="overall-message" class="message"></div>
+        <div class="button-row">
+          <button
+            id="download-core-btn"
+            class="tactile-btn tactile-btn--primary"
+            type="button"
+          >
+            Start model
+          </button>
+          <button
+            id="open-models-btn"
+            class="tactile-btn tactile-btn--ghost"
+            type="button"
+          >
+            Manage models
+          </button>
+        </div>
+        <div id="download-progress" class="progress-wrap hidden">
+          <div id="download-progress-text" class="small">Starting...</div>
+          <div class="progress-bar">
+            <div id="download-progress-bar" class="progress-bar-inner"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="status-card">
+        <div class="title">Setup Checklist</div>
+        <div id="checklist" class="checklist" aria-live="polite"></div>
+      </section>
+
+      <section class="status-card">
+        <div class="title">Models</div>
+        <div id="model-list" class="model-list" aria-live="polite"></div>
+      </section>
+
+      <section class="status-card">
+        <div class="title">Preferences</div>
+        <div class="settings-container">
+          <div class="row">
+            <label for="minWords">Min words for selection tools</label>
+            <input id="minWords" type="number" min="1" />
+          </div>
+          <div class="settings-grid">
+            <fieldset class="settings-group">
+              <legend>Ask</legend>
+              <div class="field-row">
+                <label for="askStyle">Answer style</label>
+                <select id="askStyle">
+                  <option value="concise">Concise</option>
+                  <option value="balanced">Balanced</option>
+                  <option value="detailed">Detailed</option>
+                </select>
+              </div>
+              <div class="field-row">
+                <label for="askFormat">Output format</label>
+                <select id="askFormat">
+                  <option value="markdown">Markdown</option>
+                  <option value="plain-text">Plain text</option>
+                </select>
+              </div>
+            </fieldset>
+
+            <fieldset class="settings-group">
+              <legend>Page Summary</legend>
+              <div class="field-row">
+                <label for="pageSummaryType">Type</label>
+                <select id="pageSummaryType">
+                  <option value="key-points">Key points</option>
+                  <option value="tldr">TL;DR</option>
+                  <option value="teaser">Teaser</option>
+                  <option value="headline">Headline</option>
+                </select>
+              </div>
+              <div class="field-row">
+                <label for="pageSummaryLength">Length</label>
+                <select id="pageSummaryLength">
+                  <option value="short">Short</option>
+                  <option value="medium">Medium</option>
+                  <option value="long">Long</option>
+                </select>
+              </div>
+              <div class="field-row">
+                <label for="pageSummaryFormat">Output format</label>
+                <select id="pageSummaryFormat">
+                  <option value="markdown">Markdown</option>
+                  <option value="plain-text">Plain text</option>
+                </select>
+              </div>
+              <div class="field-row field-row--stack">
+                <label for="pageSummaryInstructions">Extra instructions</label>
+                <textarea id="pageSummaryInstructions" rows="3" maxlength="500"></textarea>
+              </div>
+            </fieldset>
+
+            <fieldset class="settings-group">
+              <legend>Selection Summary</legend>
+              <div class="field-row">
+                <label for="selectionSummaryType">Type</label>
+                <select id="selectionSummaryType">
+                  <option value="key-points">Key points</option>
+                  <option value="tldr">TL;DR</option>
+                  <option value="teaser">Teaser</option>
+                  <option value="headline">Headline</option>
+                </select>
+              </div>
+              <div class="field-row">
+                <label for="selectionSummaryLength">Length</label>
+                <select id="selectionSummaryLength">
+                  <option value="short">Short</option>
+                  <option value="medium">Medium</option>
+                  <option value="long">Long</option>
+                </select>
+              </div>
+              <div class="field-row">
+                <label for="selectionSummaryFormat">Output format</label>
+                <select id="selectionSummaryFormat">
+                  <option value="markdown">Markdown</option>
+                  <option value="plain-text">Plain text</option>
+                </select>
+              </div>
+              <div class="field-row field-row--stack">
+                <label for="selectionSummaryInstructions">Extra instructions</label>
+                <textarea id="selectionSummaryInstructions" rows="3" maxlength="500"></textarea>
+              </div>
+            </fieldset>
+          </div>
+          <div class="row center">
+            <button
+              id="save-settings-btn"
+              class="tactile-btn tactile-btn--ghost"
+              type="button"
+            >
+              Save
+            </button>
+            <span id="save-status" class="small"></span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>
