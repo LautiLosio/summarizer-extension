@@ -19,49 +19,57 @@
     </header>
 
     <main id="container" class="container">
-      <section class="status-card status-card--success">
-        <div class="section-head">
-          <div>
-            <div id="overall-title" class="title">Checking Chrome AI</div>
+      <section class="options-pane options-pane--left" aria-label="Assistant status">
+        <div class="status-card status-card--success">
+          <div class="section-head">
+            <div>
+              <div id="overall-title" class="title">Checking Chrome AI</div>
+            </div>
+            <span id="overall-pill" class="state-badge">...</span>
           </div>
-          <span id="overall-pill" class="state-badge">...</span>
-        </div>
-        <div id="overall-message" class="message"></div>
-        <div class="button-row">
-          <button
-            id="download-core-btn"
-            class="tactile-btn tactile-btn--primary"
-            type="button"
-          >
-            Start model
-          </button>
-          <button
-            id="open-models-btn"
-            class="tactile-btn tactile-btn--ghost"
-            type="button"
-          >
-            Manage models
-          </button>
-        </div>
-        <div id="download-progress" class="progress-wrap hidden">
-          <div id="download-progress-text" class="small">Starting...</div>
-          <div class="progress-bar">
-            <div id="download-progress-bar" class="progress-bar-inner"></div>
+          <div class="status-summary">
+            <div id="overall-message" class="message"></div>
+            <div class="button-row">
+              <button
+                id="download-core-btn"
+                class="tactile-btn tactile-btn--primary"
+                type="button"
+              >
+                Start model
+              </button>
+              <button
+                id="open-models-btn"
+                class="tactile-btn tactile-btn--ghost"
+                type="button"
+              >
+                Manage models
+              </button>
+            </div>
+          </div>
+          <div id="download-progress" class="progress-wrap hidden">
+            <div id="download-progress-text" class="small">Starting...</div>
+            <div class="progress-bar">
+              <div id="download-progress-bar" class="progress-bar-inner"></div>
+            </div>
           </div>
         </div>
+
+        <div class="status-card">
+          <fieldset class="pane-group">
+            <legend>Setup Checklist</legend>
+            <div id="checklist" class="checklist" aria-live="polite"></div>
+          </fieldset>
+        </div>
+
+        <div class="status-card">
+          <fieldset class="pane-group">
+            <legend>Models</legend>
+            <div id="model-list" class="model-list" aria-live="polite"></div>
+          </fieldset>
+        </div>
       </section>
 
-      <section class="status-card">
-        <div class="title">Setup Checklist</div>
-        <div id="checklist" class="checklist" aria-live="polite"></div>
-      </section>
-
-      <section class="status-card">
-        <div class="title">Models</div>
-        <div id="model-list" class="model-list" aria-live="polite"></div>
-      </section>
-
-      <section class="status-card">
+      <section class="options-pane options-pane--right" aria-label="Preferences">
         <div class="title">Preferences</div>
         <div class="settings-container">
           <div class="row">
