@@ -120,12 +120,13 @@
 }
 
 .sts-popup {
+  --popup-max-height: calc(100vh - 32px);
   position: fixed;
+  top: 16px;
   right: 16px;
-  bottom: 16px;
   z-index: 2147483647;
   width: min(380px, 92vw);
-  max-height: min(58vh, 500px);
+  max-height: var(--popup-max-height);
   display: none;
   opacity: 0;
   visibility: hidden;
@@ -144,11 +145,11 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-height: min(58vh, 500px);
+  max-height: var(--popup-max-height);
   overflow: hidden;
   border: 2px solid var(--border);
   background: var(--surface);
-  transform: translateY(6px);
+  transform: translateY(-6px);
   transition: transform 140ms var(--ease);
 }
 
@@ -158,6 +159,7 @@
 
 .sts-popup-header {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -281,10 +283,12 @@
 }
 
 .sts-content {
+  flex: 0 1 auto;
+  min-height: 0;
   padding: 8px;
   overflow-y: auto;
   overflow-x: hidden;
-  max-height: calc(min(58vh, 500px) - 118px);
+  max-height: calc(var(--popup-max-height) - 118px);
   background: var(--surface);
   color: var(--text);
   animation: sts-enter 120ms var(--ease);
@@ -320,6 +324,7 @@
 }
 
 .sts-compose {
+  flex: 0 0 auto;
   padding: 8px;
   background: var(--surface);
   animation: sts-enter 120ms var(--ease);
@@ -449,9 +454,15 @@
 .sts-content-md,
 .sts-stream-text {
   color: var(--text);
+  display: block;
   font-size: 13px !important;
   font-weight: 400 !important;
+  height: auto !important;
   line-height: 1.45;
+  margin: 0 !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  padding: 0 !important;
 }
 
 .sts-stream-text {
