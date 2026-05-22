@@ -243,6 +243,8 @@
 .sts-mode:focus-visible,
 .sts-select:focus-visible,
 .sts-compose textarea:focus-visible {
+  animation: sts-focus-throb 600ms var(--ease) infinite alternate;
+  box-shadow: 0 0 0 0 var(--border);
   outline: 0;
 }
 
@@ -349,6 +351,7 @@
   background: var(--surface);
   color: var(--text);
   outline: none;
+  will-change: box-shadow;
 }
 
 .sts-select {
@@ -463,6 +466,15 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes sts-focus-throb {
+  from {
+    box-shadow: 0 0 0 0 var(--border);
+  }
+  to {
+    box-shadow: 0 0 0 2px var(--border);
   }
 }
 

@@ -356,6 +356,7 @@ textarea {
   color: var(--text);
   font-weight: 800;
   outline: none;
+  will-change: box-shadow;
 }
 
 input[type="number"],
@@ -376,7 +377,7 @@ input[type="number"]:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 button:focus-visible {
-  box-shadow: 0 0 0 3px var(--focus);
+  animation: option-focus-throb 700ms var(--ease) infinite alternate;
   outline: 0;
 }
 
@@ -469,6 +470,15 @@ button:focus-visible {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes option-focus-throb {
+  from {
+    box-shadow: 0 0 0 0px var(--focus);
+  }
+  to {
+    box-shadow: 0 0 0 2px var(--focus);
   }
 }
 
