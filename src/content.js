@@ -1,6 +1,7 @@
 import { Readability } from "@mozilla/readability";
 import contentStyles from "./content.css";
 import { createFilledIcon } from "./lib/filled-icons.js";
+import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
 
 (() => {
   const CONFIG_KEY = "sts_config";
@@ -38,6 +39,7 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     back: "back",
     copy: "copy",
     close: "x",
+    newSession: "new-session",
     stop: "stop",
   };
   const MAX_CONTEXT_CHARS = 18000;
@@ -82,6 +84,8 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     activeController: null,
     languageSession: null,
     outputEl: null,
+    streamBuffer: "",
+    streamRenderFrame: null,
     lastAnswer: "",
     chatMessages: [],
     chatContext: null,
@@ -507,6 +511,12 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     compose.innerHTML = getModeForm(mode);
     trackTextEntryElement(compose.querySelector("textarea"));
     compose.querySelector("form")?.addEventListener("submit", onModeSubmit);
+    const newSessionButton = compose.querySelector(".sts-new-session");
+    if (newSessionButton) {
+      setIconButton(newSessionButton, "newSession", "");
+      newSessionButton.addEventListener("click", startNewAskSession);
+    }
+    syncAskSessionButton();
     compose
       .querySelector("textarea")
       ?.addEventListener("keydown", onTextareaKeydown);
@@ -535,7 +545,10 @@ import { createFilledIcon } from "./lib/filled-icons.js";
           <div class="sts-ask-grid">
             <textarea id="sts-question" rows="1" placeholder="Ask..."></textarea>
           </div>
-          <button class="sts-btn sts-btn--tinted" data-run="ask" type="submit">Ask</button>
+          <div class="sts-ask-actions">
+            <button class="sts-btn sts-btn--tinted" data-run="ask" type="submit">Ask</button>
+            <button class="sts-btn sts-btn--icon sts-new-session" type="button" aria-label="Start new session" title="Start new session"></button>
+          </div>
         </form>
       `;
     }
@@ -559,19 +572,56 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     return state.outputEl;
   }
 
-  function setOutputText(text, label = "Result") {
+  function renderOutputText(text, format = "markdown") {
+    return format === "markdown"
+      ? renderMarkdown(text)
+      : renderPlainText(text);
+  }
+
+  function setOutputText(text, label = "Result", format = "markdown") {
     const content = ensurePanel().querySelector("#sts-content");
     if (!content) return;
     content.innerHTML = `
       <div class="sts-turn-label">${escapeHtml(label)}</div>
-      <div class="sts-content-md">${escapeHtml(text).replace(/\n/g, "<br>")}</div>
+      <div class="sts-content-md">${renderOutputText(text, format)}</div>
     `;
   }
 
-  function appendOutputChunk(chunk) {
+  function appendOutputChunk(chunk, format = "markdown") {
+    appendStreamingChunk(chunk, format);
+  }
+
+  function appendStreamingChunk(chunk, format = "markdown") {
     if (!state.outputEl || !chunk) return;
     clearDownloadStatus();
+    state.streamBuffer += chunk;
+
+    if (format === "markdown") {
+      scheduleStreamingRender();
+      return;
+    }
+
     state.outputEl.textContent += chunk;
+    scrollContentToBottom();
+  }
+
+  function scheduleStreamingRender() {
+    if (state.streamRenderFrame !== null) return;
+    state.streamRenderFrame = requestAnimationFrame(() => {
+      state.streamRenderFrame = null;
+      if (!state.outputEl) return;
+      state.outputEl.innerHTML = renderMarkdown(state.streamBuffer);
+      scrollContentToBottom();
+    });
+  }
+
+  function cancelStreamingRender() {
+    if (state.streamRenderFrame === null) return;
+    cancelAnimationFrame(state.streamRenderFrame);
+    state.streamRenderFrame = null;
+  }
+
+  function scrollContentToBottom() {
     const content = ensurePanel().querySelector("#sts-content");
     if (content) content.scrollTop = content.scrollHeight;
   }
@@ -625,8 +675,46 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     state.activeController?.abort();
     state.activeController = null;
     state.outputEl = null;
+    state.streamBuffer = "";
+    cancelStreamingRender();
     setRunning(false);
     setDownloadStatus("");
+  }
+
+  function startNewAskSession() {
+    if (state.isRunning) stopCurrentRun();
+    try {
+      state.languageSession?.destroy?.();
+    } catch (_) {
+      // Session cleanup is best effort; dropping the reference prevents reuse.
+    }
+    state.languageSession = null;
+    state.chatMessages = [];
+    state.outputEl = null;
+    state.streamBuffer = "";
+    cancelStreamingRender();
+    state.lastAnswer = "";
+    clearDownloadStatus();
+    state.panelEl?.querySelector(".sts-copy")?.setAttribute("disabled", "true");
+    const input = state.panelEl?.querySelector("#sts-question");
+    if (input) input.value = "";
+    renderChatTranscript();
+    input?.focus();
+  }
+
+  function syncAskSessionButton() {
+    const actions = state.panelEl?.querySelector(".sts-ask-actions");
+    const button = state.panelEl?.querySelector(".sts-new-session");
+    const hasSession = state.chatMessages.length > 0;
+    actions?.classList.toggle("sts-has-session", hasSession);
+    button?.setAttribute("aria-hidden", String(!hasSession));
+    if (button) {
+      if (hasSession) {
+        button.removeAttribute("tabindex");
+      } else {
+        button.setAttribute("tabindex", "-1");
+      }
+    }
   }
 
   function onModeSubmit(event) {
@@ -669,13 +757,16 @@ import { createFilledIcon } from "./lib/filled-icons.js";
   }
 
   async function runQuickAction(action) {
+    await ensureConfig();
     state.selectionText = getSelectionText() || state.selectionText;
     showPanel();
     prepareQuickActionMode("summarize");
 
     if (action === "summarize-page") {
+      const summaryFormat = getSummaryConfig("page").format;
       await runTask("Page summary", (emit) =>
         summarizeText(getPageContext().text, "page", emit),
+        summaryFormat,
       );
       return;
     }
@@ -683,12 +774,14 @@ import { createFilledIcon } from "./lib/filled-icons.js";
       const text = state.selectionText;
       if (!text)
         return setError("Select text first, then use Selection summary.");
+      const summaryFormat = getSummaryConfig("selection").format;
       await runTask("Selection summary", (emit) =>
         summarizeText(
           truncateText(text, MAX_SELECTION_CHARS),
           "selection",
           emit,
         ),
+        summaryFormat,
       );
       return;
     }
@@ -746,6 +839,7 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     if (!content) return;
     if (!state.chatMessages.length) {
       content.innerHTML = `<div class="sts-empty"></div>`;
+      syncAskSessionButton();
       return;
     }
     content.innerHTML = `
@@ -753,6 +847,7 @@ import { createFilledIcon } from "./lib/filled-icons.js";
         ${state.chatMessages.map(renderChatMessage).join("")}
       </div>
     `;
+    syncAskSessionButton();
     state.outputEl = content.querySelector(
       "[data-streaming='true'] .sts-message-text",
     );
@@ -765,10 +860,13 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     const content = message.content || "";
     const streamingAttr =
       !isUser && !message.content ? ' data-streaming="true"' : "";
+    const renderedContent = isUser
+      ? renderPlainText(content)
+      : renderOutputText(content, state.config.ask.format);
     return `
       <div class="sts-message sts-message--${isUser ? "user" : "assistant"}"${streamingAttr}>
         <div class="sts-message-role">${label}</div>
-        <div class="sts-content-md sts-message-text">${escapeHtml(content).replace(/\n/g, "<br>")}</div>
+        <div class="sts-content-md sts-message-text">${renderedContent}</div>
       </div>
     `;
   }
@@ -776,6 +874,7 @@ import { createFilledIcon } from "./lib/filled-icons.js";
   async function runChatTask(assistantMessage, producer) {
     state.activeController = new AbortController();
     state.lastAnswer = "";
+    state.streamBuffer = "";
     setRunning(true);
     const startedAt = performance.now();
     let out = "";
@@ -785,7 +884,7 @@ import { createFilledIcon } from "./lib/filled-icons.js";
         const text = String(chunk || "");
         out += text;
         assistantMessage.content = out;
-        appendChatChunk(text);
+        appendChatChunk(text, state.config.ask.format);
       });
       assistantMessage.content = normalizeGeneratedOutput(out);
       state.lastAnswer = assistantMessage.content;
@@ -813,16 +912,14 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     } finally {
       setRunning(false);
       clearDownloadStatus();
+      state.streamBuffer = "";
+      cancelStreamingRender();
       state.activeController = null;
     }
   }
 
-  function appendChatChunk(chunk) {
-    if (!state.outputEl || !chunk) return;
-    clearDownloadStatus();
-    state.outputEl.textContent += chunk;
-    const content = ensurePanel().querySelector("#sts-content");
-    if (content) content.scrollTop = content.scrollHeight;
+  function appendChatChunk(chunk, format = "markdown") {
+    appendStreamingChunk(chunk, format);
   }
 
   function buildConversationHistoryPrompt(messages) {
@@ -836,10 +933,11 @@ import { createFilledIcon } from "./lib/filled-icons.js";
       : "No previous messages.";
   }
 
-  async function runTask(label, producer) {
+  async function runTask(label, producer, format = "markdown") {
     if (state.isRunning) stopCurrentRun();
     state.activeController = new AbortController();
     state.lastAnswer = "";
+    state.streamBuffer = "";
     setRunning(true);
     const surfaceEl = setOutputShell(label);
     const startedAt = performance.now();
@@ -851,12 +949,10 @@ import { createFilledIcon } from "./lib/filled-icons.js";
       out = await producer((chunk) => {
         const text = String(chunk || "");
         out += text;
-        appendOutputChunk(text);
+        appendOutputChunk(text, format);
       });
       state.lastAnswer = normalizeGeneratedOutput(out);
-      if (!state.outputEl || state.outputEl.textContent !== state.lastAnswer) {
-        setOutputText(state.lastAnswer, label);
-      }
+      setOutputText(state.lastAnswer, label, format);
       if (state.lastAnswer) {
         state.panelEl?.querySelector(".sts-copy")?.removeAttribute("disabled");
       }
@@ -866,7 +962,11 @@ import { createFilledIcon } from "./lib/filled-icons.js";
       if (Number.isFinite(cps) && cps > 0) savePerformanceMetrics(cps);
     } catch (error) {
       if (error?.name === "AbortError") {
-        setOutputText(normalizeGeneratedOutput(out) || "Stopped.", label);
+        setOutputText(
+          normalizeGeneratedOutput(out) || "Stopped.",
+          label,
+          format,
+        );
       } else {
         setError(
           error instanceof Error
@@ -877,6 +977,8 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     } finally {
       setRunning(false);
       clearDownloadStatus();
+      state.streamBuffer = "";
+      cancelStreamingRender();
       state.activeController = null;
     }
   }
@@ -1218,7 +1320,7 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     const safeProgress = Math.max(0, Math.min(100, progress));
     const modelName =
       label === "Summarizer" ? "summarizer model" : "assistant model";
-    if (safeProgress >= 100) return `Starting the model...`;
+    if (safeProgress >= 100) return `Thinking...`;
     return `Loading the model into memory... ${safeProgress}%`;
   }
 
