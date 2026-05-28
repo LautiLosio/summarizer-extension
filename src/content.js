@@ -1,4 +1,5 @@
 import { Readability } from "@mozilla/readability";
+import contentStyles from "./content.css";
 import { createFilledIcon } from "./lib/filled-icons.js";
 
 (() => {
@@ -41,7 +42,20 @@ import { createFilledIcon } from "./lib/filled-icons.js";
   };
   const MAX_CONTEXT_CHARS = 18000;
   const MAX_SELECTION_CHARS = 12000;
+  const MAX_CHAT_HISTORY_CHARS = 8000;
   const API_NAMES = ["LanguageModel", "Summarizer"];
+  const TEXT_ENTRY_EVENT_TYPES = [
+    "beforeinput",
+    "compositionend",
+    "compositionstart",
+    "compositionupdate",
+    "cut",
+    "input",
+    "keydown",
+    "keypress",
+    "keyup",
+    "paste",
+  ];
   const API_AVAILABILITY_OPTIONS = {
     LanguageModel: {
       expectedInputs: [{ type: "text", languages: ["en", "es", "ja"] }],
@@ -69,7 +83,10 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     languageSession: null,
     outputEl: null,
     lastAnswer: "",
+    chatMessages: [],
+    chatContext: null,
     isRunning: false,
+    focusedTextEntryEl: null,
     performanceMetrics: {
       avgCharsPerSecond: 18,
       runCount: 0,
@@ -236,13 +253,81 @@ import { createFilledIcon } from "./lib/filled-icons.js";
       window.getSelection()?.removeAllRanges();
       runQuickAction("summarize-selection");
     });
-    document.body.appendChild(el);
+    createShadowUiRoot("tooltip").appendChild(el);
     return (state.tooltipEl = el);
+  }
+
+  function createShadowUiRoot(name) {
+    const host = document.createElement("div");
+    host.dataset.localAiRoot = name;
+    setIsolatedHostStyle(host);
+    const root = host.attachShadow({ mode: "closed" });
+    const style = document.createElement("style");
+    style.textContent = contentStyles;
+    root.appendChild(style);
+    (document.body || document.documentElement).appendChild(host);
+    return root;
+  }
+
+  function setIsolatedHostStyle(host) {
+    const importantStyles = {
+      all: "initial",
+      contain: "style",
+      display: "block",
+      height: "0",
+      overflow: "visible",
+      position: "static",
+      width: "0",
+    };
+    Object.entries(importantStyles).forEach(([property, value]) => {
+      host.style.setProperty(property, value, "important");
+    });
   }
 
   function consumeMouse(event) {
     event.preventDefault();
     event.stopPropagation();
+  }
+
+  function isLocalAiEvent(event) {
+    return event
+      .composedPath?.()
+      .some((node) => node?.dataset?.localAiRoot);
+  }
+
+  function stopLocalAiEvent(event) {
+    if (!isLocalAiEvent(event)) return;
+    handleContainedTextEntryShortcut(event);
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+  }
+
+  function handleContainedTextEntryShortcut(event) {
+    if (
+      event.type !== "keydown" ||
+      event.key !== "Enter" ||
+      event.shiftKey ||
+      state.focusedTextEntryEl?.id !== "sts-question"
+    ) {
+      return;
+    }
+    event.preventDefault();
+    state.focusedTextEntryEl.form?.requestSubmit();
+  }
+
+  function installTextEntryFirewall() {
+    TEXT_ENTRY_EVENT_TYPES.forEach((eventType) => {
+      window.addEventListener(eventType, stopLocalAiEvent, true);
+    });
+  }
+
+  function trackTextEntryElement(input) {
+    input?.addEventListener("focus", () => {
+      state.focusedTextEntryEl = input;
+    });
+    input?.addEventListener("blur", () => {
+      if (state.focusedTextEntryEl === input) state.focusedTextEntryEl = null;
+    });
   }
 
   function showTooltipAt(rect) {
@@ -306,7 +391,7 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     );
     el.querySelector(".sts-copy")?.addEventListener("click", copyAnswer);
     el.querySelector(".sts-stop")?.addEventListener("click", stopCurrentRun);
-    document.body.appendChild(el);
+    createShadowUiRoot("panel").appendChild(el);
     state.panelEl = el;
     decoratePanelIcons();
     renderMode("home");
@@ -416,8 +501,13 @@ import { createFilledIcon } from "./lib/filled-icons.js";
       return;
     }
 
-    content.innerHTML = "";
+    if (mode === "ask") {
+      renderChatTranscript();
+    } else {
+      content.innerHTML = "";
+    }
     compose.innerHTML = getModeForm(mode);
+    trackTextEntryElement(compose.querySelector("textarea"));
     compose.querySelector("form")?.addEventListener("submit", onModeSubmit);
     compose
       .querySelector("textarea")
@@ -622,22 +712,130 @@ import { createFilledIcon } from "./lib/filled-icons.js";
 
   async function runAssistantQuestion(question) {
     await ensureConfig();
-    const context = getPageContext();
+    if (state.isRunning) stopCurrentRun();
+    const context = getChatPageContext();
     const askConfig = state.config.ask;
+    const userMessage = { role: "user", content: question };
+    state.chatMessages.push(userMessage);
+    const assistantMessage = { role: "assistant", content: "" };
+    state.chatMessages.push(assistantMessage);
+    renderChatTranscript();
+
     const prompt = [
-      "Answer the user's question using the provided page context when it is relevant.",
+      "Answer the user's latest question using the provided page context and conversation history when relevant.",
       "Be direct, note uncertainty, and do not invent facts not present in the context.",
       "Answer in the same language as the user's question.",
+      "Treat conversation history as context for follow-up questions, but treat the page context as the source of truth for page facts.",
       `Answer style: ${askConfig.style}.`,
       `Output format: ${askConfig.format === "markdown" ? "Markdown" : "plain text"}.`,
       "",
       `Context source: ${context.label}`,
       context.text ? `Context:\n${context.text}` : "Context: none",
       "",
-      `Question:\n${question}`,
+      "Conversation history:",
+      buildConversationHistoryPrompt(state.chatMessages.slice(0, -2)),
+      "",
+      `Latest question:\n${question}`,
     ].join("\n");
 
-    await runTask("Answer", (emit) => promptLanguageModel(prompt, emit));
+    await runChatTask(assistantMessage, (emit) =>
+      promptLanguageModel(prompt, emit),
+    );
+  }
+
+  function renderChatTranscript() {
+    const content = ensurePanel().querySelector("#sts-content");
+    if (!content) return;
+    if (!state.chatMessages.length) {
+      content.innerHTML = `<div class="sts-empty"></div>`;
+      return;
+    }
+    content.innerHTML = `
+      <div class="sts-chat" aria-live="polite">
+        ${state.chatMessages.map(renderChatMessage).join("")}
+      </div>
+    `;
+    state.outputEl = content.querySelector(
+      "[data-streaming='true'] .sts-message-text",
+    );
+    content.scrollTop = content.scrollHeight;
+  }
+
+  function renderChatMessage(message) {
+    const isUser = message.role === "user";
+    const label = isUser ? "You" : "Local AI";
+    const content = message.content || "";
+    const streamingAttr =
+      !isUser && !message.content ? ' data-streaming="true"' : "";
+    return `
+      <div class="sts-message sts-message--${isUser ? "user" : "assistant"}"${streamingAttr}>
+        <div class="sts-message-role">${label}</div>
+        <div class="sts-content-md sts-message-text">${escapeHtml(content).replace(/\n/g, "<br>")}</div>
+      </div>
+    `;
+  }
+
+  async function runChatTask(assistantMessage, producer) {
+    state.activeController = new AbortController();
+    state.lastAnswer = "";
+    setRunning(true);
+    const startedAt = performance.now();
+    let out = "";
+
+    try {
+      out = await producer((chunk) => {
+        const text = String(chunk || "");
+        out += text;
+        assistantMessage.content = out;
+        appendChatChunk(text);
+      });
+      assistantMessage.content = normalizeGeneratedOutput(out);
+      state.lastAnswer = assistantMessage.content;
+      renderChatTranscript();
+      if (state.lastAnswer) {
+        state.panelEl?.querySelector(".sts-copy")?.removeAttribute("disabled");
+      }
+
+      const seconds = Math.max(0.05, (performance.now() - startedAt) / 1000);
+      const cps = state.lastAnswer.length / seconds;
+      if (Number.isFinite(cps) && cps > 0) savePerformanceMetrics(cps);
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        assistantMessage.content = normalizeGeneratedOutput(out) || "Stopped.";
+        state.lastAnswer = assistantMessage.content;
+        renderChatTranscript();
+      } else {
+        state.chatMessages.pop();
+        setError(
+          error instanceof Error
+            ? error.message
+            : "The assistant could not complete that request.",
+        );
+      }
+    } finally {
+      setRunning(false);
+      clearDownloadStatus();
+      state.activeController = null;
+    }
+  }
+
+  function appendChatChunk(chunk) {
+    if (!state.outputEl || !chunk) return;
+    clearDownloadStatus();
+    state.outputEl.textContent += chunk;
+    const content = ensurePanel().querySelector("#sts-content");
+    if (content) content.scrollTop = content.scrollHeight;
+  }
+
+  function buildConversationHistoryPrompt(messages) {
+    const lines = messages.map((message) => {
+      const role = message.role === "user" ? "User" : "Assistant";
+      return `${role}: ${message.content}`;
+    });
+    const history = cleanText(lines.join("\n\n"));
+    return history
+      ? truncateText(history, MAX_CHAT_HISTORY_CHARS)
+      : "No previous messages.";
   }
 
   async function runTask(label, producer) {
@@ -657,7 +855,7 @@ import { createFilledIcon } from "./lib/filled-icons.js";
         out += text;
         appendOutputChunk(text);
       });
-      state.lastAnswer = out || "";
+      state.lastAnswer = normalizeGeneratedOutput(out);
       if (!state.outputEl || state.outputEl.textContent !== state.lastAnswer) {
         setOutputText(state.lastAnswer, label);
       }
@@ -670,7 +868,7 @@ import { createFilledIcon } from "./lib/filled-icons.js";
       if (Number.isFinite(cps) && cps > 0) savePerformanceMetrics(cps);
     } catch (error) {
       if (error?.name === "AbortError") {
-        setOutputText(out || "Stopped.", label);
+        setOutputText(normalizeGeneratedOutput(out) || "Stopped.", label);
       } else {
         setError(
           error instanceof Error
@@ -683,6 +881,10 @@ import { createFilledIcon } from "./lib/filled-icons.js";
       clearDownloadStatus();
       state.activeController = null;
     }
+  }
+
+  function normalizeGeneratedOutput(text) {
+    return String(text || "").trim();
   }
 
   function getPageContext() {
@@ -699,6 +901,11 @@ import { createFilledIcon } from "./lib/filled-icons.js";
       ),
     };
     return state.pageContext;
+  }
+
+  function getChatPageContext() {
+    if (!state.chatContext) state.chatContext = getPageContext();
+    return state.chatContext;
   }
 
   function extractReadablePageText() {
@@ -872,14 +1079,17 @@ import { createFilledIcon } from "./lib/filled-icons.js";
 
   function buildSummaryFallbackPrompt(input, source, config) {
     const typeInstruction = getTypeInstruction(config);
+    const lengthInstruction = getLengthInstruction(config.length, config.type);
     return [
-      `Summarize this ${source}.`,
+      `Summarize this ${source} using only the requested output.`,
       typeInstruction,
-      `Length: ${config.length}.`,
+      lengthInstruction,
       `Output format: ${config.format === "markdown" ? "Markdown" : "plain text"}.`,
       getFormatInstruction(config.format),
       config.instructions,
+      "Return only the final summary. Do not include analysis, drafts, alternatives, preambles, or a second summary.",
       "",
+      "Source text:",
       input,
     ].join("\n");
   }
@@ -890,11 +1100,31 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     }
     return (
       {
-        "key-points": "Use key points.",
-        tldr: "Write a TL;DR.",
-        teaser: "Write a teaser.",
-        headline: "Write a headline.",
+        "key-points": "Write the key points only.",
+        tldr:
+          "Write one TL;DR only. It must be a compact final answer, not a longer summary followed by a TL;DR.",
+        teaser: "Write one short teaser only.",
+        headline: "Write one headline only.",
       }[config.type] || `Use summary type: ${config.type}.`
+    );
+  }
+
+  function getLengthInstruction(length, type) {
+    if (type === "headline") return "Length: one line, no more than 18 words.";
+    if (type === "teaser") return "Length: one sentence, no more than 30 words.";
+    if (type === "tldr") {
+      return length === "long"
+        ? "Length: one paragraph, no more than 90 words."
+        : length === "medium"
+          ? "Length: one paragraph, no more than 60 words."
+          : "Length: one or two sentences, no more than 40 words.";
+    }
+    return (
+      {
+        short: "Length: no more than 60 words.",
+        medium: "Length: no more than 120 words.",
+        long: "Length: no more than 220 words.",
+      }[length] || `Length: ${length}.`
     );
   }
 
@@ -1183,5 +1413,6 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     }
   });
 
+  installTextEntryFirewall();
   loadConfig();
 })();

@@ -1,3 +1,7 @@
+:host {
+  all: initial !important;
+}
+
 .sts-tooltip,
 .sts-popup {
   --background: #fffcf0;
@@ -215,7 +219,6 @@
   justify-content: center;
   gap: 5px;
   min-height: 30px;
-  min-width:;
   padding: 0 9px;
   border: 2px solid var(--border);
   border-radius: 0;
@@ -385,6 +388,43 @@
   margin-bottom: 8px;
   color: var(--muted);
   font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+.sts-chat {
+  display: grid;
+  gap: 8px;
+}
+
+.sts-message {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.sts-message:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.sts-message-role {
+  color: var(--muted);
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+.sts-message-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.sts-message[data-streaming="true"] .sts-message-text:empty::before {
+  color: var(--muted);
+  content: "Thinking...";
+}
+
+.sts-message--user .sts-message-text {
   font-weight: 800 !important;
 }
 
