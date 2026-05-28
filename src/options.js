@@ -76,8 +76,28 @@ const LANGUAGE_MODEL_OPTION_FALLBACKS = [
 ];
 
 const storage = {
-  get: (keys) => new Promise((resolve) => chrome.storage.sync.get(keys, resolve)),
-  set: (items) => new Promise((resolve) => chrome.storage.sync.set(items, resolve)),
+  get: (keys) =>
+    new Promise((resolve, reject) => {
+      chrome.storage.sync.get(keys, (res) => {
+        const error = chrome.runtime.lastError;
+        if (error) {
+          reject(new Error(error.message));
+          return;
+        }
+        resolve(res);
+      });
+    }),
+  set: (items) =>
+    new Promise((resolve, reject) => {
+      chrome.storage.sync.set(items, () => {
+        const error = chrome.runtime.lastError;
+        if (error) {
+          reject(new Error(error.message));
+          return;
+        }
+        resolve();
+      });
+    }),
 };
 
 const elements = {
@@ -137,6 +157,22 @@ function decorateStaticButtons() {
 
 let initialConfigJson = "";
 let currentRows = [];
+
+function runHandled(action, onError = showOptionsError) {
+  Promise.resolve()
+    .then(action)
+    .catch(onError);
+}
+
+function showOptionsError(error) {
+  hideProgress();
+  setOverall(
+    "Settings page needs attention",
+    "Check setup",
+    "blocked",
+    error instanceof Error ? error.message : "Chrome could not complete that action.",
+  );
+}
 
 function normalizeMinWords(value) {
   const num = Number(value);
@@ -510,15 +546,22 @@ function hideProgress() {
 }
 
 function openChromePage(url) {
-  chrome.tabs.create({ url });
+  chrome.tabs.create({ url }, () => {
+    void chrome.runtime.lastError;
+  });
 }
 
 async function copyFlag(button) {
-  await navigator.clipboard.writeText(button.dataset.copyFlag || "");
-  setIconButton(button, "copy", "Copied");
-  setTimeout(() => {
-    setIconButton(button, "copy", "Copy");
-  }, 1200);
+  try {
+    await navigator.clipboard.writeText(button.dataset.copyFlag || "");
+    setIconButton(button, "copy", "Copied");
+  } catch (_) {
+    setIconButton(button, "copy", "Retry");
+  } finally {
+    setTimeout(() => {
+      setIconButton(button, "copy", "Copy");
+    }, 1200);
+  }
 }
 
 async function loadSettings() {
@@ -563,14 +606,14 @@ function bindSettingsInputs() {
 
 function init() {
   decorateStaticButtons();
-  elements.refreshBtn?.addEventListener("click", refreshApis);
-  elements.downloadCoreBtn?.addEventListener("click", startCoreModel);
+  elements.refreshBtn?.addEventListener("click", () => runHandled(refreshApis));
+  elements.downloadCoreBtn?.addEventListener("click", () => runHandled(startCoreModel));
   elements.openModelsBtn?.addEventListener("click", () => openChromePage("chrome://on-device-internals"));
-  elements.saveSettingsBtn?.addEventListener("click", saveSettings);
+  elements.saveSettingsBtn?.addEventListener("click", () => runHandled(saveSettings));
   bindSettingsInputs();
 
-  loadSettings();
-  refreshApis();
+  runHandled(loadSettings);
+  runHandled(refreshApis);
 }
 
 document.addEventListener("DOMContentLoaded", init);

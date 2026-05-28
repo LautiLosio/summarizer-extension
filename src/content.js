@@ -290,9 +290,7 @@ import { createFilledIcon } from "./lib/filled-icons.js";
   }
 
   function isLocalAiEvent(event) {
-    return event
-      .composedPath?.()
-      .some((node) => node?.dataset?.localAiRoot);
+    return event.composedPath?.().some((node) => node?.dataset?.localAiRoot);
   }
 
   function stopLocalAiEvent(event) {
@@ -1101,8 +1099,7 @@ import { createFilledIcon } from "./lib/filled-icons.js";
     return (
       {
         "key-points": "Write the key points only.",
-        tldr:
-          "Write one TL;DR only. It must be a compact final answer, not a longer summary followed by a TL;DR.",
+        tldr: "Write one TL;DR only. It must be a compact final answer, not a longer summary followed by a TL;DR.",
         teaser: "Write one short teaser only.",
         headline: "Write one headline only.",
       }[config.type] || `Use summary type: ${config.type}.`
@@ -1111,7 +1108,8 @@ import { createFilledIcon } from "./lib/filled-icons.js";
 
   function getLengthInstruction(length, type) {
     if (type === "headline") return "Length: one line, no more than 18 words.";
-    if (type === "teaser") return "Length: one sentence, no more than 30 words.";
+    if (type === "teaser")
+      return "Length: one sentence, no more than 30 words.";
     if (type === "tldr") {
       return length === "long"
         ? "Length: one paragraph, no more than 90 words."
@@ -1218,9 +1216,10 @@ import { createFilledIcon } from "./lib/filled-icons.js";
 
   function getModelLoadingMessage(label, progress) {
     const safeProgress = Math.max(0, Math.min(100, progress));
-    const modelName = label === "Summarizer" ? "summarizer model" : "assistant model";
-    if (safeProgress >= 100) return `Starting the local ${modelName}...`;
-    return `Loading the local ${modelName} into memory... ${safeProgress}%`;
+    const modelName =
+      label === "Summarizer" ? "summarizer model" : "assistant model";
+    if (safeProgress >= 100) return `Starting the model...`;
+    return `Loading the model into memory... ${safeProgress}%`;
   }
 
   async function assertAvailable(name, options = {}) {

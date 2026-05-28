@@ -231,7 +231,7 @@
                   <div id="popup-actions" class="button-row"></div>
                 </div>
                 <div class="popup-content">
-                  Loading the local assistant model into memory... 42%
+                  Loading the model into memory... 42%
                 </div>
               </div>
             </div>
@@ -303,9 +303,9 @@
           const iconSources = Object.fromEntries(
             await Promise.all(
               iconNames.map(async (name) => {
-                const source = await fetch(`../src/icons/${name}.svg?t=${Date.now()}`).then(
-                  (response) => response.text(),
-                );
+                const source = await fetch(
+                  `../src/icons/${name}.svg?t=${Date.now()}`,
+                ).then((response) => response.text());
                 return [name, source];
               }),
             ),
@@ -334,23 +334,50 @@
             document.createTextNode("Answer"),
           ]);
           replaceChildren(popupActions, [
-            button(renderIcon(iconSources, "copy", "icon-medium"), "Copy", "copy"),
+            button(
+              renderIcon(iconSources, "copy", "icon-medium"),
+              "Copy",
+              "copy",
+            ),
             button(renderIcon(iconSources, "stop", "icon-medium"), "Stop"),
-            button(renderIcon(iconSources, "x", "icon-medium"), "", "icon-only"),
+            button(
+              renderIcon(iconSources, "x", "icon-medium"),
+              "",
+              "icon-only",
+            ),
           ]);
           replaceChildren(optionButtons, [
             button(renderIcon(iconSources, "refresh", "icon-small"), "Refresh"),
-            button(renderIcon(iconSources, "start", "icon-small"), "Start model", "primary"),
-            button(renderIcon(iconSources, "database", "icon-small"), "Manage models"),
-            button(renderIcon(iconSources, "save", "icon-small"), "Saved", "save"),
+            button(
+              renderIcon(iconSources, "start", "icon-small"),
+              "Start model",
+              "primary",
+            ),
+            button(
+              renderIcon(iconSources, "database", "icon-small"),
+              "Manage models",
+            ),
+            button(
+              renderIcon(iconSources, "save", "icon-small"),
+              "Saved",
+              "save",
+            ),
           ]);
           replaceChildren(flagButtons, [
-            button(renderIcon(iconSources, "external-link", "icon-small"), "Open"),
-            button(renderIcon(iconSources, "copy", "icon-small"), "Copied", "copy"),
+            button(
+              renderIcon(iconSources, "external-link", "icon-small"),
+              "Open",
+            ),
+            button(
+              renderIcon(iconSources, "copy", "icon-small"),
+              "Copied",
+              "copy",
+            ),
           ]);
           status.textContent = `Updated ${new Date().toLocaleTimeString()}`;
         } catch (error) {
-          status.textContent = error instanceof Error ? error.message : "Icon render failed";
+          status.textContent =
+            error instanceof Error ? error.message : "Icon render failed";
         }
       }
 

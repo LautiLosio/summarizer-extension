@@ -7,27 +7,32 @@ const MENU_IDS = {
 
 function createContextMenus() {
   chrome.contextMenus.removeAll(() => {
+    drainLastError();
     chrome.contextMenus.create({
       id: MENU_IDS.OPEN_ASSISTANT,
       title: "Open Local AI",
       contexts: ["page"],
-    });
+    }, drainLastError);
     chrome.contextMenus.create({
       id: MENU_IDS.SUMMARIZE_PAGE,
       title: "Summarize this page",
       contexts: ["page"],
-    });
+    }, drainLastError);
     chrome.contextMenus.create({
       id: MENU_IDS.ASK_SELECTION,
       title: "Ask about selection",
       contexts: ["selection"],
-    });
+    }, drainLastError);
     chrome.contextMenus.create({
       id: MENU_IDS.SUMMARIZE_SELECTION,
       title: "Summarize selection",
       contexts: ["selection"],
-    });
+    }, drainLastError);
   });
+}
+
+function drainLastError() {
+  void chrome.runtime.lastError;
 }
 
 chrome.runtime.onInstalled.addListener(createContextMenus);
@@ -73,7 +78,7 @@ function sendMessageToTab(tabId, message) {
         files: ["content.js"],
       });
       chrome.tabs.sendMessage(tabId, message, () => {
-        void chrome.runtime.lastError;
+        drainLastError();
       });
     } catch (_) {}
   });

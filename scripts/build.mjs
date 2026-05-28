@@ -30,6 +30,7 @@ const bundleOptions = {
   target: "chrome120",
   outdir: outDir,
   loader: {
+    ".css": "text",
     ".svg": "text",
   },
   sourcemap: false,

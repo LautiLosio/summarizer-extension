@@ -18,5 +18,12 @@
     stroke="currentColor"
     stroke-width="1"
   />
-  <rect width="3" height="3" fill="black" fill-opacity="1" x="2.5" y="4" />
+  <rect
+    width="3"
+    height="3"
+    fill="currentColor"
+    fill-opacity="1"
+    x="2.5"
+    y="4"
+  />
 </svg>
