@@ -20,5 +20,6 @@
     "
     stroke="currentColor"
     stroke-width="1"
+    stroke-linecap="square"
   />
 </svg>

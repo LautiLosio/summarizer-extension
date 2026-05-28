@@ -11,6 +11,14 @@
     M 5 7
     L 2 4
     L 5 1
+  "
+    stroke="currentColor"
+    stroke-width="1"
+    stroke-linecap="square"
+  />
+
+  <path
+    d="
     M 2 4
     L 7 4
   "

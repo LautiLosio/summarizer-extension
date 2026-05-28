@@ -17,6 +17,7 @@
     "
     stroke="currentColor"
     stroke-width="1"
+    stroke-linecap="square"
   />
   <rect
     width="3"
