@@ -60,30 +60,29 @@ h1 {
   animation: option-enter 140ms var(--ease);
 }
 
-.status-card {
+.options-section {
   border: 0;
   border-top: 2px solid var(--border);
   background: var(--surface);
 }
 
-.options-pane > .status-card:first-child {
+.options-pane > .options-section:first-child {
   border-top: 0;
 }
 
-.options-pane--left > .status-card + .status-card {
+.options-section + .options-section {
   border-top: 0;
 }
 
-.section-head,
-.title,
+.options-section-head,
+.options-section-title,
+.options-section-body,
 .message,
-.status-summary,
-.button-row,
-.settings-container {
+.button-row {
   padding: 8px;
 }
 
-.section-head {
+.options-section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -91,19 +90,10 @@ h1 {
   border-bottom: 1px solid var(--border-muted);
 }
 
-.title {
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.section-head .title {
+.options-section-title {
   padding: 0;
   font-size: 19px;
-  line-height: 1.2;
-}
-
-.options-pane--right > .title {
-  font-size: 19px;
+  font-weight: 800;
   line-height: 1.2;
 }
 
@@ -121,12 +111,6 @@ h1 {
   justify-content: space-between;
   gap: 12px;
   min-height: 46px;
-}
-
-.options-pane--left > .status-card:first-child > .section-head,
-.options-pane--left > .status-card:first-child > .status-summary {
-  padding-right: 0;
-  padding-left: 0;
 }
 
 .status-summary .message,
@@ -228,40 +212,10 @@ button:active:not(:disabled),
   color: var(--background);
 }
 
-.status-checklist {
-  padding: 8px 0;
-  border-top: 0;
-}
-
-.inline-section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0;
-  color: var(--text);
-  font-size: 17px;
-  font-weight: 800;
-  line-height: 1.25;
-}
-
-.inline-section-title::after {
-  content: "";
-  flex: 1 1 auto;
-  border-top: 2px solid var(--border);
-}
-
 .checklist,
 .model-list {
   display: grid;
   border-top: 1px solid var(--border-muted);
-}
-
-.status-checklist .checklist {
-  border-top: 0;
-}
-
-.status-checklist .check-row:last-child {
-  border-bottom: 0;
 }
 
 .check-row,
@@ -375,7 +329,6 @@ button:active:not(:disabled),
 .settings-container {
   display: grid;
   gap: 10px;
-  border-top: 1px solid var(--border-muted);
 }
 
 .row {
@@ -441,28 +394,12 @@ button:focus-visible {
   gap: 14px;
 }
 
-.settings-group {
-  min-width: 0;
-  margin: 0;
-  padding: 0 0 2px;
-  border: 0;
-  border-top: 2px solid var(--border);
-}
-
 .pane-group {
   min-width: 0;
   margin: 0;
   padding: 0 0 2px;
   border: 0;
   border-top: 2px solid var(--border);
-}
-
-.settings-group legend {
-  padding: 0 8px 0 0;
-  color: var(--text);
-  font-size: 17px;
-  font-weight: 800;
-  line-height: 1.25;
 }
 
 .pane-group legend {

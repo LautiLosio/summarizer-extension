@@ -14,6 +14,8 @@
   --primary: #100f0f;
   --primary-hover: #343331;
   --danger: #af3029;
+  --selection-background: #100f0f;
+  --selection-text: #fffcf0;
   --ease: cubic-bezier(0.2, 0, 0.4, 1);
   --font: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   scrollbar-color: var(--muted) var(--surface);
@@ -29,6 +31,13 @@
   font-size: 13px !important;
   scrollbar-color: var(--muted) var(--surface);
   scrollbar-width: thin;
+}
+
+.sts-popup::selection,
+.sts-popup *::selection {
+  background: var(--selection-background) !important;
+  color: var(--selection-text) !important;
+  text-shadow: none !important;
 }
 
 .sts-popup *::-webkit-scrollbar {

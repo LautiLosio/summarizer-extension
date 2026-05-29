@@ -12,15 +12,17 @@
     </header>
 
     <main id="container" class="container">
-      <section class="options-pane options-pane--left" aria-label="Assistant status">
-        <div class="status-card status-card--success">
-          <div class="section-head">
+      <section class="options-pane" aria-label="Assistant status">
+        <div class="options-section">
+          <div class="options-section-head">
             <div>
-              <div id="overall-title" class="title">Setup status</div>
+              <div id="overall-title" class="options-section-title">
+                Setup status
+              </div>
             </div>
             <span id="overall-pill" class="state-badge">...</span>
           </div>
-          <div class="status-summary">
+          <div class="options-section-body status-summary">
             <div id="overall-message" class="message"></div>
             <div class="button-row">
               <button
@@ -38,129 +40,137 @@
               <div id="download-progress-bar" class="progress-bar-inner"></div>
             </div>
           </div>
-          <div class="status-checklist">
-            <div class="inline-section-title">Setup checklist</div>
-            <div id="checklist" class="checklist" aria-live="polite"></div>
+          <div class="options-section-body">
+            <fieldset class="pane-group">
+              <legend>Setup checklist</legend>
+              <div id="checklist" class="checklist" aria-live="polite"></div>
+            </fieldset>
           </div>
         </div>
 
-        <div class="status-card">
-          <fieldset class="pane-group">
-            <legend>Model details</legend>
-            <div id="model-list" class="model-list" aria-live="polite"></div>
-          </fieldset>
+        <div class="options-section">
+          <div class="options-section-body">
+            <fieldset class="pane-group">
+              <legend>Model details</legend>
+              <div id="model-list" class="model-list" aria-live="polite"></div>
+            </fieldset>
+          </div>
         </div>
       </section>
 
-      <section class="options-pane options-pane--right" aria-label="Preferences">
-        <div class="title">Preferences</div>
-        <div class="settings-container">
-          <div class="row">
-            <label for="minWords">Min words for selection tools</label>
-            <input id="minWords" type="number" min="1" />
+      <section class="options-pane" aria-label="Preferences">
+        <div class="options-section">
+          <div class="options-section-head">
+            <div class="options-section-title">Preferences</div>
           </div>
-          <div class="settings-grid">
-            <fieldset class="settings-group">
-              <legend>Ask</legend>
-              <div class="field-row">
-                <label for="askStyle">Answer style</label>
-                <select id="askStyle">
-                  <option value="concise">Concise</option>
-                  <option value="balanced">Balanced</option>
-                  <option value="detailed">Detailed</option>
-                </select>
-              </div>
-              <div class="field-row">
-                <label for="askFormat">Output format</label>
-                <select id="askFormat">
-                  <option value="markdown">Markdown</option>
-                  <option value="plain-text">Plain text</option>
-                </select>
-              </div>
-            </fieldset>
+          <div class="options-section-body settings-container">
+            <div class="row">
+              <label for="minWords">Min words for selection tools</label>
+              <input id="minWords" type="number" min="1" />
+            </div>
+            <div class="settings-grid">
+              <fieldset class="pane-group">
+                <legend>Ask</legend>
+                <div class="field-row">
+                  <label for="askStyle">Answer style</label>
+                  <select id="askStyle">
+                    <option value="concise">Concise</option>
+                    <option value="balanced">Balanced</option>
+                    <option value="detailed">Detailed</option>
+                  </select>
+                </div>
+                <div class="field-row">
+                  <label for="askFormat">Output format</label>
+                  <select id="askFormat">
+                    <option value="markdown">Markdown</option>
+                    <option value="plain-text">Plain text</option>
+                  </select>
+                </div>
+              </fieldset>
 
-            <fieldset class="settings-group">
-              <legend>Page Summary</legend>
-              <div class="field-row">
-                <label for="pageSummaryType">Type</label>
-                <select id="pageSummaryType">
-                  <option value="key-points">Key points</option>
-                  <option value="tldr">TL;DR</option>
-                  <option value="teaser">Teaser</option>
-                  <option value="headline">Headline</option>
-                </select>
-              </div>
-              <div class="field-row">
-                <label for="pageSummaryLength">Length</label>
-                <select id="pageSummaryLength">
-                  <option value="short">Short</option>
-                  <option value="medium">Medium</option>
-                  <option value="long">Long</option>
-                </select>
-              </div>
-              <div class="field-row">
-                <label for="pageSummaryFormat">Output format</label>
-                <select id="pageSummaryFormat">
-                  <option value="markdown">Markdown</option>
-                  <option value="plain-text">Plain text</option>
-                </select>
-              </div>
-              <div class="field-row field-row--stack">
-                <label for="pageSummaryInstructions">Extra instructions</label>
-                <textarea
-                  id="pageSummaryInstructions"
-                  rows="3"
-                  maxlength="500"
-                ></textarea>
-              </div>
-            </fieldset>
+              <fieldset class="pane-group">
+                <legend>Page Summary</legend>
+                <div class="field-row">
+                  <label for="pageSummaryType">Type</label>
+                  <select id="pageSummaryType">
+                    <option value="key-points">Key points</option>
+                    <option value="tldr">TL;DR</option>
+                    <option value="teaser">Teaser</option>
+                    <option value="headline">Headline</option>
+                  </select>
+                </div>
+                <div class="field-row">
+                  <label for="pageSummaryLength">Length</label>
+                  <select id="pageSummaryLength">
+                    <option value="short">Short</option>
+                    <option value="medium">Medium</option>
+                    <option value="long">Long</option>
+                  </select>
+                </div>
+                <div class="field-row">
+                  <label for="pageSummaryFormat">Output format</label>
+                  <select id="pageSummaryFormat">
+                    <option value="markdown">Markdown</option>
+                    <option value="plain-text">Plain text</option>
+                  </select>
+                </div>
+                <div class="field-row field-row--stack">
+                  <label for="pageSummaryInstructions">Extra instructions</label>
+                  <textarea
+                    id="pageSummaryInstructions"
+                    rows="3"
+                    maxlength="500"
+                  ></textarea>
+                </div>
+              </fieldset>
 
-            <fieldset class="settings-group">
-              <legend>Selection Summary</legend>
-              <div class="field-row">
-                <label for="selectionSummaryType">Type</label>
-                <select id="selectionSummaryType">
-                  <option value="key-points">Key points</option>
-                  <option value="tldr">TL;DR</option>
-                  <option value="teaser">Teaser</option>
-                  <option value="headline">Headline</option>
-                </select>
-              </div>
-              <div class="field-row">
-                <label for="selectionSummaryLength">Length</label>
-                <select id="selectionSummaryLength">
-                  <option value="short">Short</option>
-                  <option value="medium">Medium</option>
-                  <option value="long">Long</option>
-                </select>
-              </div>
-              <div class="field-row">
-                <label for="selectionSummaryFormat">Output format</label>
-                <select id="selectionSummaryFormat">
-                  <option value="markdown">Markdown</option>
-                  <option value="plain-text">Plain text</option>
-                </select>
-              </div>
-              <div class="field-row field-row--stack">
-                <label for="selectionSummaryInstructions"
-                  >Extra instructions</label
-                >
-                <textarea
-                  id="selectionSummaryInstructions"
-                  rows="3"
-                  maxlength="500"
-                ></textarea>
-              </div>
-            </fieldset>
-          </div>
-          <div class="row center">
-            <button
-              id="save-settings-btn"
-              class="tactile-btn tactile-btn--ghost"
-              type="button"
-            >
-              Save
-            </button>
+              <fieldset class="pane-group">
+                <legend>Selection Summary</legend>
+                <div class="field-row">
+                  <label for="selectionSummaryType">Type</label>
+                  <select id="selectionSummaryType">
+                    <option value="key-points">Key points</option>
+                    <option value="tldr">TL;DR</option>
+                    <option value="teaser">Teaser</option>
+                    <option value="headline">Headline</option>
+                  </select>
+                </div>
+                <div class="field-row">
+                  <label for="selectionSummaryLength">Length</label>
+                  <select id="selectionSummaryLength">
+                    <option value="short">Short</option>
+                    <option value="medium">Medium</option>
+                    <option value="long">Long</option>
+                  </select>
+                </div>
+                <div class="field-row">
+                  <label for="selectionSummaryFormat">Output format</label>
+                  <select id="selectionSummaryFormat">
+                    <option value="markdown">Markdown</option>
+                    <option value="plain-text">Plain text</option>
+                  </select>
+                </div>
+                <div class="field-row field-row--stack">
+                  <label for="selectionSummaryInstructions"
+                    >Extra instructions</label
+                  >
+                  <textarea
+                    id="selectionSummaryInstructions"
+                    rows="3"
+                    maxlength="500"
+                  ></textarea>
+                </div>
+              </fieldset>
+            </div>
+            <div class="row center">
+              <button
+                id="save-settings-btn"
+                class="tactile-btn tactile-btn--ghost"
+                type="button"
+              >
+                Save
+              </button>
+            </div>
           </div>
         </div>
       </section>
