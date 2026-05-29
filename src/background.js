@@ -35,7 +35,14 @@ function drainLastError() {
   void chrome.runtime.lastError;
 }
 
-chrome.runtime.onInstalled.addListener(createContextMenus);
+function handleInstalled(details) {
+  createContextMenus();
+
+  if (details.reason !== chrome.runtime.OnInstalledReason.INSTALL) return;
+  chrome.runtime.openOptionsPage(drainLastError);
+}
+
+chrome.runtime.onInstalled.addListener(handleInstalled);
 chrome.runtime.onStartup.addListener(createContextMenus);
 
 chrome.action.onClicked.addListener((tab) => {
