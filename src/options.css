@@ -36,7 +36,7 @@ header {
 h1 {
   margin: 0;
   overflow: hidden;
-  font-size: 16px;
+  font-size: 22px;
   font-weight: 800;
   line-height: 1.1;
   text-overflow: ellipsis;
@@ -98,7 +98,13 @@ h1 {
 
 .section-head .title {
   padding: 0;
-  font-size: 14px;
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.options-pane--right > .title {
+  font-size: 19px;
+  line-height: 1.2;
 }
 
 .message {
@@ -106,6 +112,7 @@ h1 {
   font-size: 12px;
   font-weight: 700;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .status-summary {
@@ -114,6 +121,12 @@ h1 {
   justify-content: space-between;
   gap: 12px;
   min-height: 46px;
+}
+
+.options-pane--left > .status-card:first-child > .section-head,
+.options-pane--left > .status-card:first-child > .status-summary {
+  padding-right: 0;
+  padding-left: 0;
 }
 
 .status-summary .message,
@@ -200,10 +213,6 @@ button:active:not(:disabled),
   box-shadow: inset 0 0 0 20px var(--border);
 }
 
-button[data-copy-flag] {
-  min-width: 90px;
-}
-
 #save-settings-btn {
   min-width: 100px;
 }
@@ -219,10 +228,40 @@ button[data-copy-flag] {
   color: var(--background);
 }
 
+.status-checklist {
+  padding: 8px 0;
+  border-top: 0;
+}
+
+.inline-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.inline-section-title::after {
+  content: "";
+  flex: 1 1 auto;
+  border-top: 2px solid var(--border);
+}
+
 .checklist,
 .model-list {
   display: grid;
   border-top: 1px solid var(--border-muted);
+}
+
+.status-checklist .checklist {
+  border-top: 0;
+}
+
+.status-checklist .check-row:last-child {
+  border-bottom: 0;
 }
 
 .check-row,
@@ -230,7 +269,7 @@ button[data-copy-flag] {
   display: grid;
   align-items: center;
   min-height: 44px;
-  padding: 7px 8px;
+  padding: 7px 0;
   border-bottom: 1px solid var(--border-muted);
   background: var(--surface);
   transition:
@@ -239,16 +278,16 @@ button[data-copy-flag] {
 }
 
 .check-row {
-  grid-template-columns: 10px minmax(120px, 180px) minmax(0, 1fr);
+  grid-template-columns: 12px minmax(120px, 180px) minmax(0, 1fr);
   gap: 8px;
 }
 
 .flag-row {
-  grid-template-columns: 10px minmax(120px, 180px) minmax(0, 1fr) auto;
+  grid-template-columns: 12px minmax(120px, 180px) minmax(0, 1fr) auto;
 }
 
 .model-row {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 
@@ -260,6 +299,7 @@ button[data-copy-flag] {
 .check-row strong,
 .model-row strong {
   overflow: hidden;
+  font-size: 13px;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -277,21 +317,34 @@ button[data-copy-flag] {
 }
 
 .check-dot {
-  width: 8px;
-  height: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
   background: var(--muted);
 }
 
 .check-dot.ready {
-  background: var(--success);
+  color: var(--success);
+  background: transparent;
 }
 
 .check-dot.pending {
+  width: 8px;
+  height: 8px;
   background: var(--warning);
 }
 
 .check-dot.blocked {
+  width: 8px;
+  height: 8px;
   background: var(--danger);
+}
+
+.check-icon {
+  width: 12px;
+  height: 12px;
 }
 
 .row-actions {
@@ -354,6 +407,7 @@ textarea {
   border-radius: 0;
   background: var(--surface);
   color: var(--text);
+  font-size: 12px;
   font-weight: 800;
   outline: none;
   will-change: box-shadow;
@@ -406,15 +460,17 @@ button:focus-visible {
 .settings-group legend {
   padding: 0 8px 0 0;
   color: var(--text);
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 800;
+  line-height: 1.25;
 }
 
 .pane-group legend {
-  padding: 0 8px 0 8px;
+  padding: 0 8px 0 0;
   color: var(--text);
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 800;
+  line-height: 1.25;
 }
 
 .pane-group .checklist,
@@ -485,7 +541,13 @@ button:focus-visible {
 @media (max-width: 1040px) {
   .container {
     grid-template-columns: 1fr;
-    gap: 14px;
+    gap: 20px;
+    width: 100%;
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  #onboarding-action-btn {
     width: 100%;
   }
 
@@ -495,6 +557,11 @@ button:focus-visible {
 }
 
 @media (max-width: 700px) {
+  .container {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
   .status-summary {
     align-items: stretch;
     flex-direction: column;
@@ -505,14 +572,12 @@ button:focus-visible {
   }
 
   .check-row,
-  .flag-row,
-  .model-row {
-    grid-template-columns: 10px minmax(0, 1fr);
+  .flag-row {
+    grid-template-columns: 12px minmax(0, 1fr);
   }
 
-  .check-row span,
-  .row-actions,
-  .model-row button {
+  .check-row > span:not(.check-dot),
+  .row-actions {
     grid-column: 2;
   }
 

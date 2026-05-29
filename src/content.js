@@ -6,7 +6,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
 (() => {
   const CONFIG_KEY = "sts_config";
   const PERFORMANCE_KEY = "sts_performance";
-  const DEFAULT_MIN_WORDS = 12;
+  const DEFAULT_MIN_WORDS = 40;
   const DEFAULT_CONFIG = {
     minWords: DEFAULT_MIN_WORDS,
     ask: {
@@ -15,17 +15,18 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     },
     summarize: {
       page: {
-        type: "key-points",
-        format: "markdown",
-        length: "medium",
-        instructions:
-          "Ignore navigation, footer, cookie notices, advertisements, and unrelated links.",
-      },
-      selection: {
-        type: "key-points",
+        type: "tldr",
         format: "markdown",
         length: "short",
-        instructions: "Focus on the selected text. Keep the result compact.",
+        instructions:
+          "Ignore navigation, footer, cookie notices, advertisements, and unrelated links. Don't say TL;DR literally.",
+      },
+      selection: {
+        type: "tldr",
+        format: "markdown",
+        length: "short",
+        instructions:
+          "Focus on the selected text. Keep the result compact. Don't say TL;DR literally.",
       },
     },
   };
@@ -40,6 +41,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     copy: "copy",
     close: "x",
     newSession: "new-session",
+    ok: "ok",
     stop: "stop",
   };
   const MAX_CONTEXT_CHARS = 18000;
@@ -90,6 +92,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     chatMessages: [],
     chatContext: null,
     isRunning: false,
+    isSelectingWithPointer: false,
     focusedTextEntryEl: null,
     performanceMetrics: {
       avgCharsPerSecond: 18,
@@ -661,7 +664,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     if (!copyBtn || !text) return;
     try {
       await navigator.clipboard.writeText(text);
-      setIconButton(copyBtn, "copy", "Copied");
+      setIconButton(copyBtn, "ok", "Copied");
     } catch (_) {
       setIconButton(copyBtn, "copy", "Retry");
     } finally {
@@ -1413,6 +1416,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
   function onSelectionChange() {
     const text = getSelectionText();
     state.selectionText = text;
+    if (state.isSelectingWithPointer) return hideTooltip();
     if (!text || countWords(text) < state.minWords) return hideTooltip();
     const sel = window.getSelection();
     if (!sel?.rangeCount || sel.isCollapsed) return hideTooltip();
@@ -1450,6 +1454,12 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     return isSelectionInView(rect) ? showTooltipAt(rect) : hideTooltip();
   }
 
+  function finishPointerSelection() {
+    if (!state.isSelectingWithPointer) return;
+    state.isSelectingWithPointer = false;
+    setTimeout(onSelectionChange, 10);
+  }
+
   document.addEventListener("selectionchange", () =>
     setTimeout(onSelectionChange, 10),
   );
@@ -1457,6 +1467,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     state.lastMouseX = event?.clientX ?? state.lastMouseX;
     state.lastMouseY = event?.clientY ?? state.lastMouseY;
     if (state.panelEl?.contains(event.target)) return;
+    if (event.button === 0) state.isSelectingWithPointer = true;
     hideTooltip();
   });
   document.addEventListener(
@@ -1472,9 +1483,11 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     (event) => {
       state.lastMouseX = event?.clientX ?? state.lastMouseX;
       state.lastMouseY = event?.clientY ?? state.lastMouseY;
+      finishPointerSelection();
     },
     true,
   );
+  window.addEventListener("blur", finishPointerSelection);
   document.addEventListener(
     "scroll",
     () => updateTooltipPositionIfNeeded(),

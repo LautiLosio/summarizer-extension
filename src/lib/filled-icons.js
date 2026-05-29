@@ -3,6 +3,7 @@ import copySvg from "../icons/copy.svg";
 import databaseSvg from "../icons/database.svg";
 import externalLinkSvg from "../icons/external-link.svg";
 import newSessionSvg from "../icons/new-session.svg";
+import okSvg from "../icons/ok.svg";
 import refreshSvg from "../icons/refresh.svg";
 import saveSvg from "../icons/save.svg";
 import startSvg from "../icons/start.svg";
@@ -15,6 +16,7 @@ const ICON_SVGS = {
   database: databaseSvg,
   "external-link": externalLinkSvg,
   "new-session": newSessionSvg,
+  ok: okSvg,
   refresh: refreshSvg,
   save: saveSvg,
   start: startSvg,

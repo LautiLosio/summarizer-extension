@@ -9,13 +9,6 @@
   <body>
     <header>
       <h1>Local AI</h1>
-      <button
-        id="refresh-btn"
-        class="tactile-btn tactile-btn--ghost"
-        type="button"
-      >
-        Refresh
-      </button>
     </header>
 
     <main id="container" class="container">
@@ -23,7 +16,7 @@
         <div class="status-card status-card--success">
           <div class="section-head">
             <div>
-              <div id="overall-title" class="title">Checking Chrome AI</div>
+              <div id="overall-title" class="title">Setup status</div>
             </div>
             <span id="overall-pill" class="state-badge">...</span>
           </div>
@@ -31,18 +24,11 @@
             <div id="overall-message" class="message"></div>
             <div class="button-row">
               <button
-                id="download-core-btn"
+                id="onboarding-action-btn"
                 class="tactile-btn tactile-btn--primary"
                 type="button"
               >
-                Start model
-              </button>
-              <button
-                id="open-models-btn"
-                class="tactile-btn tactile-btn--ghost"
-                type="button"
-              >
-                Manage models
+                Check setup
               </button>
             </div>
           </div>
@@ -52,18 +38,15 @@
               <div id="download-progress-bar" class="progress-bar-inner"></div>
             </div>
           </div>
-        </div>
-
-        <div class="status-card">
-          <fieldset class="pane-group">
-            <legend>Setup Checklist</legend>
+          <div class="status-checklist">
+            <div class="inline-section-title">Setup checklist</div>
             <div id="checklist" class="checklist" aria-live="polite"></div>
-          </fieldset>
+          </div>
         </div>
 
         <div class="status-card">
           <fieldset class="pane-group">
-            <legend>Models</legend>
+            <legend>Model details</legend>
             <div id="model-list" class="model-list" aria-live="polite"></div>
           </fieldset>
         </div>

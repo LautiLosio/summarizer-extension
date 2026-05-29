@@ -4,7 +4,7 @@ const STORAGE_KEYS = {
   CONFIG: "sts_config",
 };
 
-const DEFAULT_MIN_WORDS = 12;
+const DEFAULT_MIN_WORDS = 40;
 const DEFAULT_CONFIG = {
   minWords: DEFAULT_MIN_WORDS,
   ask: {
@@ -13,17 +13,18 @@ const DEFAULT_CONFIG = {
   },
   summarize: {
     page: {
-      type: "key-points",
-      format: "markdown",
-      length: "medium",
-      instructions:
-        "Ignore navigation, footer, cookie notices, advertisements, and unrelated links.",
-    },
-    selection: {
-      type: "key-points",
+      type: "tldr",
       format: "markdown",
       length: "short",
-      instructions: "Focus on the selected text. Keep the result compact.",
+      instructions:
+        "Ignore navigation, footer, cookie notices, advertisements, and unrelated links. Don't say TL;DR literally.",
+    },
+    selection: {
+      type: "tldr",
+      format: "markdown",
+      length: "short",
+      instructions:
+        "Focus on the selected text. Keep the result compact. Don't say TL;DR literally.",
     },
   },
 };
@@ -39,7 +40,7 @@ const FLAG_LINKS = [
   ["Summaries", "chrome://flags/#summarization-api-for-gemini-nano"],
 ];
 const ICONS = {
-  copy: "copy",
+  ok: "ok",
   manage: "database",
   open: "external-link",
   refresh: "refresh",
@@ -104,11 +105,9 @@ const elements = {
   overallTitle: document.getElementById("overall-title"),
   overallPill: document.getElementById("overall-pill"),
   overallMessage: document.getElementById("overall-message"),
+  onboardingActionBtn: document.getElementById("onboarding-action-btn"),
   checklist: document.getElementById("checklist"),
   modelList: document.getElementById("model-list"),
-  refreshBtn: document.getElementById("refresh-btn"),
-  downloadCoreBtn: document.getElementById("download-core-btn"),
-  openModelsBtn: document.getElementById("open-models-btn"),
   progressWrap: document.getElementById("download-progress"),
   progressText: document.getElementById("download-progress-text"),
   progressBar: document.getElementById("download-progress-bar"),
@@ -118,15 +117,24 @@ const elements = {
   pageSummaryTypeInput: document.getElementById("pageSummaryType"),
   pageSummaryLengthInput: document.getElementById("pageSummaryLength"),
   pageSummaryFormatInput: document.getElementById("pageSummaryFormat"),
-  pageSummaryInstructionsInput: document.getElementById("pageSummaryInstructions"),
+  pageSummaryInstructionsInput: document.getElementById(
+    "pageSummaryInstructions",
+  ),
   selectionSummaryTypeInput: document.getElementById("selectionSummaryType"),
-  selectionSummaryLengthInput: document.getElementById("selectionSummaryLength"),
-  selectionSummaryFormatInput: document.getElementById("selectionSummaryFormat"),
-  selectionSummaryInstructionsInput: document.getElementById("selectionSummaryInstructions"),
+  selectionSummaryLengthInput: document.getElementById(
+    "selectionSummaryLength",
+  ),
+  selectionSummaryFormatInput: document.getElementById(
+    "selectionSummaryFormat",
+  ),
+  selectionSummaryInstructionsInput: document.getElementById(
+    "selectionSummaryInstructions",
+  ),
   saveSettingsBtn: document.getElementById("save-settings-btn"),
 };
 
 let saveFeedbackTimer = null;
+let onboardingAction = "refresh";
 
 function setIconButton(button, iconName, label) {
   const iconNode = ICONS[iconName];
@@ -149,9 +157,7 @@ function setIconButton(button, iconName, label) {
 }
 
 function decorateStaticButtons() {
-  setIconButton(elements.refreshBtn, "refresh", "Refresh");
-  setIconButton(elements.downloadCoreBtn, "start", "Start model");
-  setIconButton(elements.openModelsBtn, "manage", "Manage models");
+  setIconButton(elements.onboardingActionBtn, "refresh", "Check setup");
   setIconButton(elements.saveSettingsBtn, "save", "Save");
 }
 
@@ -159,9 +165,7 @@ let initialConfigJson = "";
 let currentRows = [];
 
 function runHandled(action, onError = showOptionsError) {
-  Promise.resolve()
-    .then(action)
-    .catch(onError);
+  Promise.resolve().then(action).catch(onError);
 }
 
 function showOptionsError(error) {
@@ -170,7 +174,9 @@ function showOptionsError(error) {
     "Settings page needs attention",
     "Check setup",
     "blocked",
-    error instanceof Error ? error.message : "Chrome could not complete that action.",
+    error instanceof Error
+      ? error.message
+      : "Chrome could not complete that action.",
   );
 }
 
@@ -204,7 +210,10 @@ function normalizeConfig(config = {}) {
       ),
     },
     summarize: {
-      page: normalizeSummaryConfig(config.summarize?.page, DEFAULT_CONFIG.summarize.page),
+      page: normalizeSummaryConfig(
+        config.summarize?.page,
+        DEFAULT_CONFIG.summarize.page,
+      ),
       selection: normalizeSummaryConfig(
         config.summarize?.selection,
         DEFAULT_CONFIG.summarize.selection,
@@ -253,10 +262,13 @@ function writeSettingsForm(config) {
   elements.pageSummaryTypeInput.value = config.summarize.page.type;
   elements.pageSummaryLengthInput.value = config.summarize.page.length;
   elements.pageSummaryFormatInput.value = config.summarize.page.format;
-  elements.pageSummaryInstructionsInput.value = config.summarize.page.instructions;
+  elements.pageSummaryInstructionsInput.value =
+    config.summarize.page.instructions;
   elements.selectionSummaryTypeInput.value = config.summarize.selection.type;
-  elements.selectionSummaryLengthInput.value = config.summarize.selection.length;
-  elements.selectionSummaryFormatInput.value = config.summarize.selection.format;
+  elements.selectionSummaryLengthInput.value =
+    config.summarize.selection.length;
+  elements.selectionSummaryFormatInput.value =
+    config.summarize.selection.format;
   elements.selectionSummaryInstructionsInput.value =
     config.summarize.selection.instructions;
 }
@@ -266,11 +278,13 @@ function updateSaveAccent() {
   const changed = initialConfigJson ? current !== initialConfigJson : false;
   elements.saveSettingsBtn?.classList.toggle("tactile-btn--primary", changed);
   elements.saveSettingsBtn?.classList.toggle("tactile-btn--ghost", !changed);
+  updateOnboarding(currentRows);
 }
 
 function normalizeStatus(status) {
   if (status === "available" || status === "ready") return "ready";
-  if (status === "downloadable" || status === "not-ready") return "downloadable";
+  if (status === "downloadable" || status === "not-ready")
+    return "downloadable";
   if (status === "downloading") return "downloading";
   if (status === "unavailable" || status === "not exposed") return "blocked";
   return "unknown";
@@ -302,7 +316,11 @@ async function checkApi(definition) {
 
 async function getAvailabilityWithFallbacks(api, definition) {
   if (!api.availability) {
-    return { status: "available", options: definition.createOptions, label: "default" };
+    return {
+      status: "available",
+      options: definition.createOptions,
+      label: "default",
+    };
   }
 
   const candidates =
@@ -369,6 +387,7 @@ function setLoadingState() {
   elements.overallPill.textContent = "...";
   elements.overallPill.className = "state-badge";
   elements.overallMessage.textContent = "";
+  setOnboarding("refresh", "Check setup", "refresh");
   elements.checklist.innerHTML = `<div class="check-row"><span class="check-dot pending"></span><span>Checking setup</span></div>`;
   elements.modelList.innerHTML = "";
 }
@@ -380,24 +399,38 @@ function renderState(rows) {
   const blocked = rows.filter((row) => row.status === "blocked");
 
   if (downloading.length) {
-    setOverall("Model download in progress", "Downloading", "pending", "Chrome reports that a model is still downloading. If it stays here, open Model manager and relaunch Chrome.");
+    setOverall(
+      "Model download in progress",
+      "Downloading",
+      "pending",
+      "Chrome reports that a model is still downloading. If it stays here, open Model manager and relaunch Chrome.",
+    );
   } else if (ready.some((row) => row.name === "LanguageModel")) {
-    setOverall("Assistant model is ready", "Ready", "ready", "The in-page assistant can run.");
+    setOverall(
+      "Extension status",
+      "Ready to use",
+      "ready",
+      "The in-page assistant and summaries can run.",
+    );
   } else if (downloadable.length) {
-    setOverall("Model can be started", "Start needed", "pending", "Click Start model once. Chrome may need a few minutes.");
+    setOverall(
+      "Model needs one start",
+      "Start needed",
+      "pending",
+      "Use the setup action once. Chrome may need a few minutes.",
+    );
   } else {
-    setOverall("Chrome AI is not enabled", "Needs setup", "blocked", "Open flags, enable the listed items, then relaunch Chrome.");
+    setOverall(
+      "Chrome AI is not enabled",
+      "Needs setup",
+      "blocked",
+      "Open flags, enable the listed items, then relaunch Chrome.",
+    );
   }
-
-  elements.downloadCoreBtn.disabled = !downloadable.length && !downloading.length;
-  setIconButton(
-    elements.downloadCoreBtn,
-    "start",
-    downloading.length ? "Downloading..." : "Start model",
-  );
 
   renderChecklist(rows);
   renderModels(rows, { blocked });
+  updateOnboarding(rows);
 }
 
 function setOverall(title, pill, tone, message) {
@@ -407,33 +440,122 @@ function setOverall(title, pill, tone, message) {
   elements.overallMessage.textContent = message;
 }
 
+function updateOnboarding(rows = []) {
+  const core = rows.find((row) => row.name === "LanguageModel");
+  const summary = rows.find((row) => row.name === "Summarizer");
+  const exposed = rows.some((row) => row.rawStatus !== "not exposed");
+  const hasDownloadable = rows.some(
+    (row) => row.status === "downloadable" || row.status === "downloading",
+  );
+  const allReady = core?.status === "ready" && summary?.status === "ready";
+
+  if (!rows.length) {
+    setOnboarding("refresh", "Check setup", "refresh");
+    return;
+  }
+
+  if (!exposed) {
+    setOnboarding("flags", "Open flags", "open");
+    return;
+  }
+
+  if (hasDownloadable) {
+    const downloading = rows.some((row) => row.status === "downloading");
+    setOnboarding(
+      downloading ? "refresh" : "start",
+      downloading ? "Check progress" : "Start model",
+      downloading ? "refresh" : "start",
+    );
+    return;
+  }
+
+  if (!allReady) {
+    setOnboarding("models", "Manage models", "manage");
+    return;
+  }
+
+  setOnboarding("refresh", "Check again", "refresh");
+}
+
+function setOnboarding(action, label, iconName) {
+  onboardingAction = action;
+  setIconButton(elements.onboardingActionBtn, iconName, label);
+}
+
+function statusMark(status) {
+  const icon = status === "ready" ? ' data-status-icon="ok"' : "";
+  return `<span class="check-dot ${status}"${icon}></span>`;
+}
+
+function decorateStatusIcons(root) {
+  root?.querySelectorAll("[data-status-icon='ok']").forEach((mark) => {
+    if (mark.firstElementChild) return;
+    const icon = createFilledIcon("ok");
+    if (!icon) return;
+    icon.classList.add("check-icon");
+    mark.append(icon);
+  });
+}
+
 function checklistItem(label, status, detail = "") {
-  const dot = status === "ready" ? "ready" : status === "pending" ? "pending" : "blocked";
+  const dot =
+    status === "ready" ? "ready" : status === "pending" ? "pending" : "blocked";
   const suffix = detail ? `<span>${detail}</span>` : "";
-  return `<div class="check-row"><span class="check-dot ${dot}"></span><strong>${label}</strong>${suffix}</div>`;
+  return `<div class="check-row">${statusMark(dot)}<strong>${label}</strong>${suffix}</div>`;
 }
 
 function renderChecklist(rows) {
   const exposed = rows.filter((row) => row.rawStatus !== "not exposed");
   const core = rows.find((row) => row.name === "LanguageModel");
   const summary = rows.find((row) => row.name === "Summarizer");
-  const anyDownload = rows.some((row) => row.status === "downloadable" || row.status === "downloading" || row.status === "ready");
+  const anyDownload = rows.some(
+    (row) =>
+      row.status === "downloadable" ||
+      row.status === "downloading" ||
+      row.status === "ready",
+  );
 
   const inferredRows = [
-    checklistItem("Chrome flags", exposed.length ? "ready" : "blocked", exposed.length ? "Detected" : "Enable and relaunch"),
-    checklistItem("Assistant model", core?.status === "ready" ? "ready" : core?.status === "downloadable" || core?.status === "downloading" ? "pending" : "blocked", statusText(core)),
-    checklistItem("Summaries", summary?.status === "ready" ? "ready" : summary?.status === "downloadable" || summary?.status === "downloading" ? "pending" : "blocked", statusText(summary)),
-    checklistItem("Local model", anyDownload ? "ready" : "blocked", anyDownload ? "Detected by Chrome" : "Not detected"),
+    checklistItem(
+      "Chrome flags",
+      exposed.length ? "ready" : "blocked",
+      exposed.length ? "Detected" : "Enable and relaunch",
+    ),
+    checklistItem(
+      "Assistant model",
+      core?.status === "ready"
+        ? "ready"
+        : core?.status === "downloadable" || core?.status === "downloading"
+          ? "pending"
+          : "blocked",
+      statusText(core),
+    ),
+    checklistItem(
+      "Summaries",
+      summary?.status === "ready"
+        ? "ready"
+        : summary?.status === "downloadable" ||
+            summary?.status === "downloading"
+          ? "pending"
+          : "blocked",
+      statusText(summary),
+    ),
+    checklistItem(
+      "Local model",
+      anyDownload ? "ready" : "blocked",
+      anyDownload ? "Detected by Chrome" : "Not detected",
+    ),
   ];
-  const flagRows = FLAG_LINKS.map(([label, url]) => flagItem(label, url, exposed.length ? "ready" : "blocked"));
+  const flagRows = FLAG_LINKS.map(([label, url]) =>
+    flagItem(label, url, exposed.length ? "ready" : "blocked"),
+  );
   elements.checklist.innerHTML = [...inferredRows, ...flagRows].join("");
+  decorateStatusIcons(elements.checklist);
   elements.checklist.querySelectorAll("[data-open-flag]").forEach((button) => {
     setIconButton(button, "open", "Open");
-    button.addEventListener("click", () => openChromePage(button.dataset.openFlag));
-  });
-  elements.checklist.querySelectorAll("[data-copy-flag]").forEach((button) => {
-    setIconButton(button, "copy", "Copy");
-    button.addEventListener("click", () => copyFlag(button));
+    button.addEventListener("click", () =>
+      openChromePage(button.dataset.openFlag),
+    );
   });
 }
 
@@ -441,12 +563,11 @@ function flagItem(label, url, status) {
   const dot = status === "ready" ? "ready" : "blocked";
   return `
     <div class="check-row flag-row">
-      <span class="check-dot ${dot}"></span>
+      ${statusMark(dot)}
       <strong>${label}</strong>
       <span>${url.replace("chrome://flags/#", "")}</span>
       <div class="row-actions">
         <button class="quiet-button" data-open-flag="${url}" type="button">Open</button>
-        <button class="quiet-button" data-copy-flag="${url}" type="button">Copy</button>
       </div>
     </div>
   `;
@@ -455,29 +576,20 @@ function flagItem(label, url, status) {
 function renderModels(rows) {
   elements.modelList.innerHTML = rows
     .map((row) => {
-      const canStart = row.status === "downloadable" || row.status === "downloading";
       return `
         <div class="model-row">
           <div>
             <strong>${row.label}</strong>
             <span>${statusText(row)}</span>
           </div>
-          <button class="tactile-btn tactile-btn--ghost" data-start="${row.name}" type="button" ${canStart ? "" : "disabled"}>
-            Start
-          </button>
         </div>
       `;
     })
     .join("");
-
-  elements.modelList.querySelectorAll("[data-start]").forEach((button) => {
-    setIconButton(button, "start", "Start");
-    button.addEventListener("click", () => startModel(button.dataset.start));
-  });
 }
 
 function summarizeRows(rows) {
-  if (rows.some((row) => row.status === "ready")) return "Ready";
+  if (rows.some((row) => row.status === "ready")) return "Available";
   if (rows.some((row) => row.status === "downloading")) return "Downloading";
   if (rows.some((row) => row.status === "downloadable")) return "Start needed";
   return "Not enabled";
@@ -486,7 +598,7 @@ function summarizeRows(rows) {
 function statusText(row) {
   if (!row) return "Not enabled";
   const suffix = row.fallbackLabel ? ` (${row.fallbackLabel})` : "";
-  if (row.status === "ready") return `Ready${suffix}`;
+  if (row.status === "ready") return `Available${suffix}`;
   if (row.status === "downloadable") return `Start needed${suffix}`;
   if (row.status === "downloading") return `Downloading${suffix}`;
   if (row.status === "blocked") return "Not enabled";
@@ -494,14 +606,22 @@ function statusText(row) {
 }
 
 async function startCoreModel() {
-  const target = currentRows.find((row) => row.status === "downloadable" || row.status === "downloading") || currentRows.find((row) => row.name === "LanguageModel");
+  const target =
+    currentRows.find(
+      (row) => row.status === "downloadable" || row.status === "downloading",
+    ) || currentRows.find((row) => row.name === "LanguageModel");
   await startModel(target?.name || "LanguageModel");
 }
 
 async function startModel(name) {
   const definition = API_DEFINITIONS.find((item) => item.name === name);
   if (!definition || !(definition.name in self)) {
-    setOverall("API is not enabled", "Needs setup", "blocked", "Open flags, enable Chrome AI, then relaunch Chrome.");
+    setOverall(
+      "API is not enabled",
+      "Needs setup",
+      "blocked",
+      "Open flags, enable Chrome AI, then relaunch Chrome.",
+    );
     return;
   }
 
@@ -513,7 +633,9 @@ async function startModel(name) {
     }
     const check = await getAvailabilityWithFallbacks(api, definition);
     if (check.status === "unavailable") {
-      throw new Error(`${definition.label} is unavailable with ${check.label}.`);
+      throw new Error(
+        `${definition.label} is unavailable with ${check.label}.`,
+      );
     }
     const instance = await api.create({
       ...check.options,
@@ -525,12 +647,19 @@ async function startModel(name) {
       },
     });
     instance?.destroy?.();
-    showProgress(`${definition.label} ready`, 100);
+    showProgress(`${definition.label} available`, 100);
     setTimeout(hideProgress, 1200);
     await refreshApis();
   } catch (error) {
     hideProgress();
-    setOverall("Model did not start", "Check setup", "blocked", error instanceof Error ? error.message : "Chrome could not start the model.");
+    setOverall(
+      "Model did not start",
+      "Check setup",
+      "blocked",
+      error instanceof Error
+        ? error.message
+        : "Chrome could not start the model.",
+    );
   }
 }
 
@@ -551,19 +680,6 @@ function openChromePage(url) {
   });
 }
 
-async function copyFlag(button) {
-  try {
-    await navigator.clipboard.writeText(button.dataset.copyFlag || "");
-    setIconButton(button, "copy", "Copied");
-  } catch (_) {
-    setIconButton(button, "copy", "Retry");
-  } finally {
-    setTimeout(() => {
-      setIconButton(button, "copy", "Copy");
-    }, 1200);
-  }
-}
-
 async function loadSettings() {
   const res = await storage.get([STORAGE_KEYS.CONFIG]);
   const config = normalizeConfig(res?.[STORAGE_KEYS.CONFIG]);
@@ -578,11 +694,27 @@ async function saveSettings() {
   writeSettingsForm(config);
   initialConfigJson = JSON.stringify(config);
   updateSaveAccent();
-  setIconButton(elements.saveSettingsBtn, "save", "Saved");
+  setIconButton(elements.saveSettingsBtn, "ok", "Saved");
   clearTimeout(saveFeedbackTimer);
   saveFeedbackTimer = setTimeout(() => {
     setIconButton(elements.saveSettingsBtn, "save", "Save");
   }, 1200);
+}
+
+function runOnboardingAction() {
+  if (onboardingAction === "flags") {
+    openChromePage(FLAG_LINKS[0][1]);
+    return;
+  }
+  if (onboardingAction === "start") {
+    runHandled(startCoreModel);
+    return;
+  }
+  if (onboardingAction === "models") {
+    openChromePage("chrome://on-device-internals");
+    return;
+  }
+  runHandled(refreshApis);
 }
 
 function bindSettingsInputs() {
@@ -606,10 +738,10 @@ function bindSettingsInputs() {
 
 function init() {
   decorateStaticButtons();
-  elements.refreshBtn?.addEventListener("click", () => runHandled(refreshApis));
-  elements.downloadCoreBtn?.addEventListener("click", () => runHandled(startCoreModel));
-  elements.openModelsBtn?.addEventListener("click", () => openChromePage("chrome://on-device-internals"));
-  elements.saveSettingsBtn?.addEventListener("click", () => runHandled(saveSettings));
+  elements.onboardingActionBtn?.addEventListener("click", runOnboardingAction);
+  elements.saveSettingsBtn?.addEventListener("click", () =>
+    runHandled(saveSettings),
+  );
   bindSettingsInputs();
 
   runHandled(loadSettings);

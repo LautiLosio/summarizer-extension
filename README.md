@@ -1,6 +1,10 @@
 # Local AI Extension
 
-This project builds a Chrome extension into `dist/`.
+Local AI adds an in-page assistant for asking questions and summarizing webpages with Chrome built-in AI. It runs 100% locally: no API keys, no third-party AI providers, and no page content sent to an external service. Once Chrome's local AI model is available on your device, it can keep working offline.
+
+Install it if you want fast page comprehension without leaving the current tab, pasting text into another app, or sending browsing context away from your computer.
+
+This project builds the extension into `dist/`.
 
 ## Load in Chrome
 
@@ -20,5 +24,6 @@ Do not select the repository root. The source manifest lives in `src/manifest.js
 ## Usage
 
 - Click the extension icon to open Local AI inside the active webpage.
-- Right-click a page or selection for assistant shortcuts.
+- Use **Ask** to ask questions about the current page.
+- Use **Summarize** to generate a page summary.
 - Open the extension options page for API status and settings.
