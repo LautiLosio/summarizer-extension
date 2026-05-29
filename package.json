@@ -1,11 +1,12 @@
 {
   "name": "local-ai-extension",
-  "version": "1.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "node scripts/build.mjs --watch",
+    "package:webstore": "npm run build && node scripts/package.mjs",
     "clean": "rm -rf dist"
   },
   "devDependencies": {

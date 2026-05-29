@@ -21,6 +21,22 @@ This project builds the extension into `dist/`.
 
 Do not select the repository root. The source manifest lives in `src/manifest.json`, and Chrome needs the bundled extension output in `dist/`.
 
+## Package for Chrome Web Store
+
+Use `package.json` as the release version source. To create the upload zip, update the package version, then run:
+
+```sh
+npm run package:webstore
+```
+
+The script builds `dist/`, applies the `package.json` version to `dist/manifest.json`, and creates a zip named:
+
+```text
+artifacts/local-ai-extension-<version>.zip
+```
+
+Upload that zip to the Chrome Web Store. The archive contains the contents of `dist/` directly, so `manifest.json` sits at the zip root.
+
 ## Usage
 
 - Click the extension icon to open Local AI inside the active webpage.

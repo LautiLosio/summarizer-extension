@@ -1,2 +1,4 @@
 node_modules/
 dist/
+artifacts/local-ai-extension-*.zip
+!artifacts/local-ai-extension-0.0.1.zip
