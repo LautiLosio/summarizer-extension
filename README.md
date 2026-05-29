@@ -6,6 +6,30 @@ Install it if you want fast page comprehension without leaving the current tab, 
 
 This project builds the extension into `dist/`.
 
+## Development Flow
+
+Run this while iterating:
+
+```sh
+npm run dev
+```
+
+Create a clean local build without changing the version:
+
+```sh
+npm run build
+```
+
+`package.json` is the release version source. The build step applies that version to `dist/manifest.json`; `src/manifest.json` is not the release source of truth.
+
+When a version is ready to release, cut the artifact:
+
+```sh
+npm run release
+```
+
+`npm run release` bumps the patch version, updates `package.json` and `package-lock.json`, rebuilds `dist/`, and creates the Chrome Web Store zip. Use `npm run release:minor` or `npm run release:major` for larger version bumps.
+
 ## Load in Chrome
 
 1. Run `npm install` if dependencies are not installed.
@@ -23,13 +47,13 @@ Do not select the repository root. The source manifest lives in `src/manifest.js
 
 ## Package for Chrome Web Store
 
-Use `package.json` as the release version source. To create the upload zip, update the package version, then run:
+Use `package.json` as the release version source. When the current version is ready to release, run:
 
 ```sh
-npm run package:webstore
+npm run release
 ```
 
-The script builds `dist/`, applies the `package.json` version to `dist/manifest.json`, and creates a zip named:
+The release script bumps the patch version, regenerates `dist/`, applies the `package.json` version to `dist/manifest.json`, and creates a zip named:
 
 ```text
 artifacts/local-ai-extension-<version>.zip

@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.mjs",
     "dev": "node scripts/build.mjs --watch",
-    "package:webstore": "npm run build && node scripts/package.mjs",
+    "build": "node scripts/build.mjs",
+    "release": "node scripts/release.mjs",
+    "release:minor": "node scripts/release.mjs --minor",
+    "release:major": "node scripts/release.mjs --major",
     "clean": "rm -rf dist"
   },
   "devDependencies": {
