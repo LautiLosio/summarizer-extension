@@ -195,24 +195,6 @@
   line-height: 1.2;
 }
 
-.sts-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-  font-size: inherit !important;
-  font-weight: 800 !important;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .sts-popup-header .actions {
   display: flex;
   flex: 0 0 auto;
@@ -220,14 +202,12 @@
 }
 
 .sts-btn,
-.sts-mode,
 .sts-select,
 .sts-compose textarea {
   font: inherit;
 }
 
-.sts-btn,
-.sts-mode {
+.sts-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -253,13 +233,11 @@
   min-width: 90px;
 }
 
-.sts-btn:not([disabled]):hover,
-.sts-mode:hover {
+.sts-btn:not([disabled]):hover {
   box-shadow: inset 0 0 0 2px var(--border);
 }
 
 .sts-btn:focus-visible,
-.sts-mode:focus-visible,
 .sts-select:focus-visible,
 .sts-compose textarea:focus-visible {
   animation: sts-focus-throb 600ms var(--ease) infinite alternate;
@@ -267,8 +245,7 @@
   outline: 0;
 }
 
-.sts-btn:not([disabled]):active,
-.sts-mode:active {
+.sts-btn:not([disabled]):active {
   color: var(--background);
   box-shadow: inset 0 0 0 20px var(--border);
 }
@@ -331,25 +308,6 @@
   line-height: 1.45;
 }
 
-.sts-mode-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  border: 2px solid var(--border);
-  border-bottom: 0;
-}
-
-.sts-mode {
-  height: 42px;
-  border: 0;
-  border-right: 2px solid var(--border);
-  border-bottom: 2px solid var(--border);
-  text-align: left;
-}
-
-.sts-mode:nth-child(2n) {
-  border-right: 0;
-}
-
 .sts-compose {
   flex: 0 0 auto;
   padding: 8px;
@@ -369,10 +327,6 @@
 .sts-ask-grid {
   display: grid;
   gap: 8px;
-}
-
-.sts-mode-form:has([data-run="summary-page"]) {
-  grid-template-columns: 1fr 1fr;
 }
 
 .sts-select,
@@ -397,6 +351,11 @@
   padding: 7px 8px;
   resize: vertical;
   line-height: 1.4;
+}
+
+.sts-compose textarea[disabled] {
+  cursor: wait;
+  opacity: 0.66;
 }
 
 .sts-ask-grid textarea {

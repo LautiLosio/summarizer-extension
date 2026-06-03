@@ -47,6 +47,8 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
   const MAX_CONTEXT_CHARS = 18000;
   const MAX_SELECTION_CHARS = 12000;
   const MAX_CHAT_HISTORY_CHARS = 8000;
+  const LANGUAGE_MODEL_SYSTEM_PROMPT =
+    "You are a compact AI assistant for web reading. Answer from the website or selected text, summarize carefully, stay brief, and say when the page does not provide enough information.";
   const API_NAMES = ["LanguageModel", "Summarizer"];
   const TEXT_ENTRY_EVENT_TYPES = [
     "beforeinput",
@@ -78,7 +80,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
   const state = {
     tooltipEl: null,
     panelEl: null,
-    currentMode: "home",
+    currentMode: "ask",
     selectionText: "",
     pageContext: null,
     minWords: DEFAULT_MIN_WORDS,
@@ -91,7 +93,11 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     lastAnswer: "",
     chatMessages: [],
     chatContext: null,
+    chatContextSource: "page",
+    queuedQuestion: "",
     isRunning: false,
+    isInitialSummaryRunning: false,
+    initialSummaryRunId: 0,
     isSelectingWithPointer: false,
     focusedTextEntryEl: null,
     performanceMetrics: {
@@ -371,7 +377,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     el.innerHTML = `
       <div class="sts-popup-inner">
         <div class="sts-popup-header">
-          <div class="title"><button class="sts-back" type="button" title="Modes">Local AI</button></div>
+          <div class="title">Local AI</div>
           <div class="actions">
             <button class="sts-btn sts-btn--ghost sts-copy" type="button">Copy</button>
             <button class="sts-btn sts-btn--ghost sts-stop" type="button">Stop</button>
@@ -391,15 +397,12 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
       }
     });
     el.querySelector(".sts-close")?.addEventListener("click", hidePanel);
-    el.querySelector(".sts-back")?.addEventListener("click", () =>
-      renderMode("home"),
-    );
     el.querySelector(".sts-copy")?.addEventListener("click", copyAnswer);
     el.querySelector(".sts-stop")?.addEventListener("click", stopCurrentRun);
     createShadowUiRoot("panel").appendChild(el);
     state.panelEl = el;
     decoratePanelIcons();
-    renderMode("home");
+    renderAssistantShell();
     return state.panelEl;
   }
 
@@ -439,6 +442,10 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     state.panelEl?.classList.remove("sts-visible");
   }
 
+  function isPanelVisible() {
+    return Boolean(state.panelEl?.classList.contains("sts-visible"));
+  }
+
   function setDownloadStatus(message) {
     const status = ensurePanel().querySelector("#sts-stream-status");
     if (status) status.textContent = message || "";
@@ -461,9 +468,38 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
       state.panelEl
         ?.querySelector(".sts-copy")
         ?.setAttribute("disabled", "true");
+    syncCopyButton();
+    syncComposeDisabled();
   }
 
-  function renderMode(mode = "home") {
+  function syncCopyButton() {
+    const copyButton = state.panelEl?.querySelector(".sts-copy");
+    if (!copyButton) return;
+    const hasCopyableContent = state.chatMessages.some(
+      (message) => message.role === "assistant" && cleanText(message.content),
+    );
+    copyButton.toggleAttribute(
+      "disabled",
+      state.isRunning || !hasCopyableContent,
+    );
+  }
+
+  function setInitialSummaryRunning(isRunning) {
+    state.isInitialSummaryRunning = isRunning;
+    syncComposeDisabled();
+  }
+
+  function syncComposeDisabled() {
+    const input = state.panelEl?.querySelector("#sts-question");
+    const askButton = state.panelEl?.querySelector("[data-run='ask']");
+    input?.toggleAttribute("disabled", state.isInitialSummaryRunning);
+    askButton?.toggleAttribute(
+      "disabled",
+      state.isRunning || state.isInitialSummaryRunning,
+    );
+  }
+
+  function renderMode(mode = "ask") {
     const panel = ensurePanel();
     const content = panel.querySelector("#sts-content");
     const compose = panel.querySelector("#sts-compose");
@@ -471,74 +507,29 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
 
     state.currentMode = mode;
     state.outputEl = null;
-    state.lastAnswer = "";
-    panel.classList.toggle("sts-is-home", mode === "home");
-    const title = panel.querySelector(".sts-back");
-    if (title) {
-      if (mode === "home") {
-        title.textContent = "Local AI";
-        delete title.dataset.iconReady;
-        delete title.dataset.iconLabel;
-      } else {
-        setIconButton(title, "back", getModeTitle(mode));
-      }
-    }
+    panel.classList.toggle("sts-is-home", false);
     panel.querySelector(".sts-copy")?.setAttribute("disabled", "true");
     panel.querySelector(".sts-stop")?.setAttribute("disabled", "true");
 
-    if (mode === "home") {
-      content.innerHTML = `
-        <div class="sts-mode-grid">
-          <button class="sts-mode" type="button" data-mode="ask">Ask</button>
-          <button class="sts-mode" type="button" data-mode="summarize">Summarize</button>
-        </div>
-      `;
-      compose.innerHTML = "";
-      content.querySelectorAll("[data-mode]").forEach((button) => {
-        button.addEventListener("click", () => renderMode(button.dataset.mode));
-      });
-      return;
-    }
-
-    if (mode === "summarize") {
-      compose.innerHTML = "";
-      runQuickAction("summarize-page");
-      return;
-    }
-
-    if (mode === "ask") {
-      renderChatTranscript();
-    } else {
-      content.innerHTML = "";
-    }
+    renderChatTranscript();
     compose.innerHTML = getModeForm(mode);
     trackTextEntryElement(compose.querySelector("textarea"));
     compose.querySelector("form")?.addEventListener("submit", onModeSubmit);
     const newSessionButton = compose.querySelector(".sts-new-session");
     if (newSessionButton) {
       setIconButton(newSessionButton, "newSession", "");
-      newSessionButton.addEventListener("click", startNewAskSession);
+      newSessionButton.addEventListener("click", clearAskQuestions);
     }
     syncAskSessionButton();
+    syncComposeDisabled();
     compose
       .querySelector("textarea")
       ?.addEventListener("keydown", onTextareaKeydown);
-    compose
-      .querySelector("[data-run='summary-page']")
-      ?.addEventListener("click", () => runQuickAction("summarize-page"));
-    compose
-      .querySelector("[data-run='summary-selection']")
-      ?.addEventListener("click", () => runQuickAction("summarize-selection"));
     compose.querySelector("textarea")?.focus();
   }
 
-  function getModeTitle(mode) {
-    return (
-      {
-        ask: "Ask",
-        summarize: "Summarize",
-      }[mode] || "Assistant"
-    );
+  function renderAssistantShell() {
+    renderMode("ask");
   }
 
   function getModeForm(mode) {
@@ -546,33 +537,16 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
       return `
         <form class="sts-mode-form">
           <div class="sts-ask-grid">
-            <textarea id="sts-question" rows="1" placeholder="Ask..."></textarea>
+            <textarea id="sts-question" rows="1" placeholder="Ask a follow-up..."></textarea>
           </div>
           <div class="sts-ask-actions">
             <button class="sts-btn sts-btn--tinted" data-run="ask" type="submit">Ask</button>
-            <button class="sts-btn sts-btn--icon sts-new-session" type="button" aria-label="Start new session" title="Start new session"></button>
+            <button class="sts-btn sts-btn--icon sts-new-session" type="button" aria-label="Clear questions" title="Clear questions"></button>
           </div>
         </form>
       `;
     }
-    if (mode === "summarize") {
-      return "";
-    }
     return "";
-  }
-
-  function setOutputShell(label = "Thinking") {
-    const content = ensurePanel().querySelector("#sts-content");
-    if (!content) return null;
-    content.innerHTML = `
-      <div class="sts-turn-label">${label}</div>
-      <div class="sts-stream-shell">
-        <div class="sts-stream-status" id="sts-stream-status" aria-live="polite"></div>
-        <div class="sts-content-md sts-stream-text" id="sts-stream-text" aria-live="polite"></div>
-      </div>
-    `;
-    state.outputEl = content.querySelector("#sts-stream-text");
-    return state.outputEl;
   }
 
   function renderOutputText(text, format = "markdown") {
@@ -581,20 +555,12 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
       : renderPlainText(text);
   }
 
-  function setOutputText(text, label = "Result", format = "markdown") {
-    const content = ensurePanel().querySelector("#sts-content");
-    if (!content) return;
-    content.innerHTML = `
-      <div class="sts-turn-label">${escapeHtml(label)}</div>
-      <div class="sts-content-md">${renderOutputText(text, format)}</div>
-    `;
-  }
-
-  function appendOutputChunk(chunk, format = "markdown") {
-    appendStreamingChunk(chunk, format);
-  }
-
   function appendStreamingChunk(chunk, format = "markdown") {
+    if (!state.outputEl) {
+      state.outputEl = state.panelEl?.querySelector(
+        "[data-streaming='true'] .sts-message-text",
+      );
+    }
     if (!state.outputEl || !chunk) return;
     clearDownloadStatus();
     state.streamBuffer += chunk;
@@ -684,7 +650,24 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     setDownloadStatus("");
   }
 
-  function startNewAskSession() {
+  function syncAskSessionButton() {
+    const actions = state.panelEl?.querySelector(".sts-ask-actions");
+    const button = state.panelEl?.querySelector(".sts-new-session");
+    const hasQuestions = state.chatMessages.some(
+      (message) => message.role === "user",
+    );
+    actions?.classList.toggle("sts-has-session", hasQuestions);
+    button?.setAttribute("aria-hidden", String(!hasQuestions));
+    if (button) {
+      if (hasQuestions) {
+        button.removeAttribute("tabindex");
+      } else {
+        button.setAttribute("tabindex", "-1");
+      }
+    }
+  }
+
+  function clearAskQuestions() {
     if (state.isRunning) stopCurrentRun();
     try {
       state.languageSession?.destroy?.();
@@ -692,32 +675,22 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
       // Session cleanup is best effort; dropping the reference prevents reuse.
     }
     state.languageSession = null;
-    state.chatMessages = [];
+    state.chatMessages = state.chatMessages.filter(
+      (message) => message.kind === "summary",
+    );
+    state.queuedQuestion = "";
     state.outputEl = null;
     state.streamBuffer = "";
     cancelStreamingRender();
-    state.lastAnswer = "";
-    clearDownloadStatus();
-    state.panelEl?.querySelector(".sts-copy")?.setAttribute("disabled", "true");
+    state.lastAnswer =
+      [...state.chatMessages]
+        .reverse()
+        .find((message) => message.role === "assistant" && message.content)
+        ?.content || "";
     const input = state.panelEl?.querySelector("#sts-question");
     if (input) input.value = "";
     renderChatTranscript();
     input?.focus();
-  }
-
-  function syncAskSessionButton() {
-    const actions = state.panelEl?.querySelector(".sts-ask-actions");
-    const button = state.panelEl?.querySelector(".sts-new-session");
-    const hasSession = state.chatMessages.length > 0;
-    actions?.classList.toggle("sts-has-session", hasSession);
-    button?.setAttribute("aria-hidden", String(!hasSession));
-    if (button) {
-      if (hasSession) {
-        button.removeAttribute("tabindex");
-      } else {
-        button.setAttribute("tabindex", "-1");
-      }
-    }
   }
 
   function onModeSubmit(event) {
@@ -727,6 +700,11 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     const mode = state.currentMode;
     if (mode === "ask") {
       if (!question) return;
+      if (state.isInitialSummaryRunning) {
+        state.queuedQuestion = question;
+        input.value = "";
+        return;
+      }
       input.value = "";
       runAssistantQuestion(question);
       return;
@@ -739,16 +717,20 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     event.currentTarget?.form?.requestSubmit();
   }
 
-  function openAssistant({ mode = "auto", prompt = "" } = {}) {
+  function openAssistant({ mode = "auto", prompt = "", toggle = false } = {}) {
+    if (toggle && isPanelVisible()) {
+      hidePanel();
+      hideTooltip();
+      return;
+    }
     state.selectionText = getSelectionText() || state.selectionText;
     showPanel();
-    renderMode(
-      mode === "selection" || mode === "page"
-        ? "ask"
-        : mode === "auto"
-          ? "home"
-          : mode,
-    );
+    const source = mode === "selection" ? "selection" : "page";
+    if (shouldReuseSession(source)) {
+      renderAssistantShell();
+    } else {
+      startCombinedSession(source, prompt);
+    }
     const input = state.panelEl?.querySelector("#sts-question");
     if (input && prompt) {
       input.value = prompt;
@@ -759,49 +741,81 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     hideTooltip();
   }
 
+  function shouldReuseSession(source) {
+    return (
+      state.chatMessages.length > 0 &&
+      state.chatContextSource === source &&
+      (state.chatContext || state.isRunning)
+    );
+  }
+
   async function runQuickAction(action) {
     await ensureConfig();
     state.selectionText = getSelectionText() || state.selectionText;
     showPanel();
-    prepareQuickActionMode("summarize");
 
     if (action === "summarize-page") {
-      const summaryFormat = getSummaryConfig("page").format;
-      await runTask("Page summary", (emit) =>
-        summarizeText(getPageContext().text, "page", emit),
-        summaryFormat,
-      );
+      await startCombinedSession("page");
       return;
     }
     if (action === "summarize-selection") {
       const text = state.selectionText;
       if (!text)
         return setError("Select text first, then use Selection summary.");
-      const summaryFormat = getSummaryConfig("selection").format;
-      await runTask("Selection summary", (emit) =>
-        summarizeText(
-          truncateText(text, MAX_SELECTION_CHARS),
-          "selection",
-          emit,
-        ),
-        summaryFormat,
-      );
+      await startCombinedSession("selection");
       return;
     }
   }
 
-  function prepareQuickActionMode(mode) {
-    const panel = ensurePanel();
-    const compose = panel.querySelector("#sts-compose");
-    state.currentMode = mode;
+  async function startCombinedSession(source = "page", prompt = "") {
+    await ensureConfig();
+    if (state.isRunning) stopCurrentRun();
+    try {
+      state.languageSession?.destroy?.();
+    } catch (_) {
+      // Session cleanup is best effort; dropping the reference prevents reuse.
+    }
+    state.languageSession = null;
+    state.chatMessages = [];
+    state.chatContext = null;
+    state.chatContextSource = source;
+    state.queuedQuestion = "";
     state.outputEl = null;
+    state.streamBuffer = "";
+    cancelStreamingRender();
     state.lastAnswer = "";
-    panel.classList.toggle("sts-is-home", false);
-    const title = panel.querySelector(".sts-back");
-    if (title) setIconButton(title, "back", getModeTitle(mode));
-    panel.querySelector(".sts-copy")?.setAttribute("disabled", "true");
-    panel.querySelector(".sts-stop")?.setAttribute("disabled", "true");
-    if (compose) compose.innerHTML = "";
+    renderAssistantShell();
+    const input = state.panelEl?.querySelector("#sts-question");
+    if (input && prompt) input.value = prompt;
+
+    const context =
+      source === "selection" ? getSelectionContext() : getPageContext();
+    state.chatContext = context;
+    const assistantMessage = {
+      role: "assistant",
+      content: "",
+      format: getSummaryConfig(source).format,
+      kind: "summary",
+    };
+    state.chatMessages.push(assistantMessage);
+    renderChatTranscript();
+
+    const summaryRunId = state.initialSummaryRunId + 1;
+    state.initialSummaryRunId = summaryRunId;
+    setInitialSummaryRunning(true);
+    try {
+      await runChatTask(
+        assistantMessage,
+        (emit) => summarizeText(context.text, source, emit),
+        assistantMessage.format,
+      );
+    } finally {
+      if (state.initialSummaryRunId !== summaryRunId) return;
+      setInitialSummaryRunning(false);
+      const queuedQuestion = state.queuedQuestion;
+      state.queuedQuestion = "";
+      if (queuedQuestion) runAssistantQuestion(queuedQuestion);
+    }
   }
 
   async function runAssistantQuestion(question) {
@@ -816,15 +830,18 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     renderChatTranscript();
 
     const prompt = [
-      "Answer the user's latest question using the provided page context and conversation history when relevant.",
-      "Be direct, note uncertainty, and do not invent facts not present in the context.",
+      "Answer the user's latest question using the website text and conversation when relevant.",
+      "Be brief, direct, and practical. Use bold only for the main answer or key terms.",
+      "Avoid repeating the first item of the conversation history unless the user asks for detail, expansion, or a longer explanation.",
+      "Do not say 'based on the context'. Refer to the website, page, article, author, or selected text when natural.",
+      "Note uncertainty and do not invent facts not present in the website text.",
       "Answer in the same language as the user's question.",
-      "Treat conversation history as context for follow-up questions, but treat the page context as the source of truth for page facts.",
+      "Treat conversation history as context for follow-up questions, but treat the website text as the source of truth for page facts.",
       `Answer style: ${askConfig.style}.`,
       `Output format: ${askConfig.format === "markdown" ? "Markdown" : "plain text"}.`,
       "",
-      `Context source: ${context.label}`,
-      context.text ? `Context:\n${context.text}` : "Context: none",
+      `Website source: ${context.label}`,
+      context.text ? `Website text:\n${context.text}` : "Website text: none",
       "",
       "Conversation history:",
       buildConversationHistoryPrompt(state.chatMessages.slice(0, -2)),
@@ -843,6 +860,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     if (!state.chatMessages.length) {
       content.innerHTML = `<div class="sts-empty"></div>`;
       syncAskSessionButton();
+      syncCopyButton();
       return;
     }
     content.innerHTML = `
@@ -851,6 +869,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
       </div>
     `;
     syncAskSessionButton();
+    syncCopyButton();
     state.outputEl = content.querySelector(
       "[data-streaming='true'] .sts-message-text",
     );
@@ -865,7 +884,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
       !isUser && !message.content ? ' data-streaming="true"' : "";
     const renderedContent = isUser
       ? renderPlainText(content)
-      : renderOutputText(content, state.config.ask.format);
+      : renderOutputText(content, message.format || state.config.ask.format);
     return `
       <div class="sts-message sts-message--${isUser ? "user" : "assistant"}"${streamingAttr}>
         <div class="sts-message-role">${label}</div>
@@ -874,7 +893,11 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     `;
   }
 
-  async function runChatTask(assistantMessage, producer) {
+  async function runChatTask(
+    assistantMessage,
+    producer,
+    format = state.config.ask.format,
+  ) {
     state.activeController = new AbortController();
     state.lastAnswer = "";
     state.streamBuffer = "";
@@ -887,14 +910,11 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
         const text = String(chunk || "");
         out += text;
         assistantMessage.content = out;
-        appendChatChunk(text, state.config.ask.format);
+        appendChatChunk(text, format);
       });
       assistantMessage.content = normalizeGeneratedOutput(out);
       state.lastAnswer = assistantMessage.content;
       renderChatTranscript();
-      if (state.lastAnswer) {
-        state.panelEl?.querySelector(".sts-copy")?.removeAttribute("disabled");
-      }
 
       const seconds = Math.max(0.05, (performance.now() - startedAt) / 1000);
       const cps = state.lastAnswer.length / seconds;
@@ -936,56 +956,6 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
       : "No previous messages.";
   }
 
-  async function runTask(label, producer, format = "markdown") {
-    if (state.isRunning) stopCurrentRun();
-    state.activeController = new AbortController();
-    state.lastAnswer = "";
-    state.streamBuffer = "";
-    setRunning(true);
-    const surfaceEl = setOutputShell(label);
-    const startedAt = performance.now();
-    let out = "";
-
-    try {
-      if (surfaceEl instanceof HTMLElement) surfaceEl.textContent = "";
-
-      out = await producer((chunk) => {
-        const text = String(chunk || "");
-        out += text;
-        appendOutputChunk(text, format);
-      });
-      state.lastAnswer = normalizeGeneratedOutput(out);
-      setOutputText(state.lastAnswer, label, format);
-      if (state.lastAnswer) {
-        state.panelEl?.querySelector(".sts-copy")?.removeAttribute("disabled");
-      }
-
-      const seconds = Math.max(0.05, (performance.now() - startedAt) / 1000);
-      const cps = state.lastAnswer.length / seconds;
-      if (Number.isFinite(cps) && cps > 0) savePerformanceMetrics(cps);
-    } catch (error) {
-      if (error?.name === "AbortError") {
-        setOutputText(
-          normalizeGeneratedOutput(out) || "Stopped.",
-          label,
-          format,
-        );
-      } else {
-        setError(
-          error instanceof Error
-            ? error.message
-            : "The assistant could not complete that request.",
-        );
-      }
-    } finally {
-      setRunning(false);
-      clearDownloadStatus();
-      state.streamBuffer = "";
-      cancelStreamingRender();
-      state.activeController = null;
-    }
-  }
-
   function normalizeGeneratedOutput(text) {
     return String(text || "").trim();
   }
@@ -1008,6 +978,15 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
 
   function getChatPageContext() {
     if (!state.chatContext) state.chatContext = getPageContext();
+    return state.chatContext;
+  }
+
+  function getSelectionContext() {
+    const text = truncateText(state.selectionText, MAX_SELECTION_CHARS);
+    state.chatContext = {
+      label: "selected text",
+      text,
+    };
     return state.chatContext;
   }
 
@@ -1137,13 +1116,17 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     }
     if ("Summarizer" in self) {
       try {
-        const summarizer = await createBuiltInApi("Summarizer", {
+        const summarizerOptions = {
           type: summaryConfig.type,
           format: summaryConfig.format,
           length: summaryConfig.length,
           sharedContext:
             "Summarize web reading material for a user who wants the useful ideas, not site chrome.",
-        });
+        };
+        const summarizer = await createBuiltInApi(
+          "Summarizer",
+          summarizerOptions,
+        );
         return await collectStreamOrValue(
           summarizer.summarizeStreaming?.(input, {
             context: summaryContext,
@@ -1266,8 +1249,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
       initialPrompts: [
         {
           role: "system",
-          content:
-            "You are a compact AI assistant for web consumption. Answer questions from page context, summarize carefully, and say when the context is insufficient.",
+          content: LANGUAGE_MODEL_SYSTEM_PROMPT,
         },
       ],
       monitor: createMonitor("Prompt"),
@@ -1500,6 +1482,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
       openAssistant({
         mode: message.mode || "auto",
         prompt: message.prompt || "",
+        toggle: !message.mode && !message.prompt,
       });
       sendResponse({ ok: true });
       return;
