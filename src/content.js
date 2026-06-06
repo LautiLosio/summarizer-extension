@@ -95,6 +95,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     chatContext: null,
     chatContextSource: "page",
     queuedQuestion: "",
+    queuedQuestionMessage: null,
     isRunning: false,
     isInitialSummaryRunning: false,
     initialSummaryRunId: 0,
@@ -492,11 +493,11 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
   function syncComposeDisabled() {
     const input = state.panelEl?.querySelector("#sts-question");
     const askButton = state.panelEl?.querySelector("[data-run='ask']");
-    input?.toggleAttribute("disabled", state.isInitialSummaryRunning);
-    askButton?.toggleAttribute(
-      "disabled",
-      state.isRunning || state.isInitialSummaryRunning,
-    );
+    const canQueueInitialQuestion =
+      state.isInitialSummaryRunning && !state.queuedQuestion;
+    const isDisabled = state.isRunning && !canQueueInitialQuestion;
+    input?.toggleAttribute("disabled", isDisabled);
+    askButton?.toggleAttribute("disabled", isDisabled);
   }
 
   function renderMode(mode = "ask") {
@@ -679,6 +680,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
       (message) => message.kind === "summary",
     );
     state.queuedQuestion = "";
+    state.queuedQuestionMessage = null;
     state.outputEl = null;
     state.streamBuffer = "";
     cancelStreamingRender();
@@ -702,7 +704,11 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
       if (!question) return;
       if (state.isInitialSummaryRunning) {
         state.queuedQuestion = question;
+        state.queuedQuestionMessage = { role: "user", content: question };
+        state.chatMessages.push(state.queuedQuestionMessage);
         input.value = "";
+        renderChatTranscript();
+        syncComposeDisabled();
         return;
       }
       input.value = "";
@@ -780,6 +786,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     state.chatContext = null;
     state.chatContextSource = source;
     state.queuedQuestion = "";
+    state.queuedQuestionMessage = null;
     state.outputEl = null;
     state.streamBuffer = "";
     cancelStreamingRender();
@@ -813,18 +820,25 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
       if (state.initialSummaryRunId !== summaryRunId) return;
       setInitialSummaryRunning(false);
       const queuedQuestion = state.queuedQuestion;
+      const queuedQuestionMessage = state.queuedQuestionMessage;
       state.queuedQuestion = "";
-      if (queuedQuestion) runAssistantQuestion(queuedQuestion);
+      state.queuedQuestionMessage = null;
+      if (queuedQuestion)
+        runAssistantQuestion(queuedQuestion, {
+          userMessage: queuedQuestionMessage,
+        });
     }
   }
 
-  async function runAssistantQuestion(question) {
+  async function runAssistantQuestion(question, { userMessage = null } = {}) {
     await ensureConfig();
     if (state.isRunning) stopCurrentRun();
     const context = getChatPageContext();
     const askConfig = state.config.ask;
-    const userMessage = { role: "user", content: question };
-    state.chatMessages.push(userMessage);
+    if (!userMessage) {
+      userMessage = { role: "user", content: question };
+      state.chatMessages.push(userMessage);
+    }
     const assistantMessage = { role: "assistant", content: "" };
     state.chatMessages.push(assistantMessage);
     renderChatTranscript();
@@ -881,7 +895,9 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     const label = isUser ? "You" : "Local AI";
     const content = message.content || "";
     const streamingAttr =
-      !isUser && !message.content ? ' data-streaming="true"' : "";
+      !isUser && (!message.content || message.isStreaming)
+        ? ' data-streaming="true"'
+        : "";
     const renderedContent = isUser
       ? renderPlainText(content)
       : renderOutputText(content, message.format || state.config.ask.format);
@@ -901,6 +917,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     state.activeController = new AbortController();
     state.lastAnswer = "";
     state.streamBuffer = "";
+    assistantMessage.isStreaming = true;
     setRunning(true);
     const startedAt = performance.now();
     let out = "";
@@ -913,6 +930,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
         appendChatChunk(text, format);
       });
       assistantMessage.content = normalizeGeneratedOutput(out);
+      assistantMessage.isStreaming = false;
       state.lastAnswer = assistantMessage.content;
       renderChatTranscript();
 
@@ -922,10 +940,14 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
     } catch (error) {
       if (error?.name === "AbortError") {
         assistantMessage.content = normalizeGeneratedOutput(out) || "Stopped.";
+        assistantMessage.isStreaming = false;
         state.lastAnswer = assistantMessage.content;
         renderChatTranscript();
       } else {
-        state.chatMessages.pop();
+        assistantMessage.isStreaming = false;
+        state.chatMessages = state.chatMessages.filter(
+          (message) => message !== assistantMessage,
+        );
         setError(
           error instanceof Error
             ? error.message
@@ -933,6 +955,7 @@ import { renderMarkdown, renderPlainText } from "./lib/markdown.js";
         );
       }
     } finally {
+      assistantMessage.isStreaming = false;
       setRunning(false);
       clearDownloadStatus();
       state.streamBuffer = "";
